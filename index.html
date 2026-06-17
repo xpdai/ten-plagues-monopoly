@@ -466,6 +466,8 @@ const I18N = {
     tile_label_edict: "Pharaoh's Edict",
     tile_label_goal: "Promised Land",
     log_turn_order: "🎲 Turn order: {order}",
+    log_rolloff: "🎲 Roll-off — {detail}",
+    log_rolloff_tie: "↻ Tie! Re-roll — {detail}",
     log_rest_skip: "{name} is resting and skips this turn.",
     log_rolled: "{name} rolled a {n}.",
     log_reached_goal: "🌅 {name} reached the Promised Land!",
@@ -604,6 +606,8 @@ const I18N = {
     tile_label_edict: "法老諭令",
     tile_label_goal: "應許之地",
     log_turn_order: "🎲 出牌順序:{order}",
+    log_rolloff: "🎲 擲骰定先後 — {detail}",
+    log_rolloff_tie: "↻ 平手,重擲 — {detail}",
     log_rest_skip: "{name} 正在歇息,本回合略過。",
     log_rolled: "{name} 擲出了 {n} 點。",
     log_reached_goal: "🌅 {name} 抵達了應許之地!",
@@ -1004,8 +1008,41 @@ document.getElementById("start-btn").addEventListener("click", () => {
     // anything the user typed.
     players.push({ id: i, name, nameIsDefault, defaultIdx: i + 1, cidx: sel.cidx, color: PRESET_COLORS[sel.cidx], pos: 0, faith: 3, skipTurns: 0, items: [] });
   }
-  startGame(players);
+  // Decide turn order by a dice roll-off (highest first; ties re-roll).
+  const { ordered, rounds } = rollForOrder(players);
+  startGame(ordered);
+  // Show the roll-off transparently: each round's rolls (avatar + value), then
+  // the resulting order on top. Detail is emoji+numbers → language-independent.
+  rounds.forEach(rnd => {
+    const detail = rnd.players.map(p => `${p.color.shape} ${rnd.rolls[p.id]}`).join(" · ");
+    pushLog(rnd.kind === "tie" ? "log_rolloff_tie" : "log_rolloff", { detail });
+  });
+  pushLog("log_turn_order", { playerIds: ordered.map(p => p.id) });
 });
+
+// Roll a die per player; order by value descending. Players that tie re-roll
+// among themselves (recursively) so the final order is fully broken.
+function rollForOrder(players) {
+  const rounds = [];
+  let guard = 0;
+  const d6 = () => 1 + Math.floor(Math.random() * 6);
+  function order(group) {
+    if (group.length <= 1) return group.slice();
+    if (++guard > 20) return group.slice();   // unbreakable (e.g. stubbed RNG) → keep order
+    const rolls = {};
+    group.forEach(p => { rolls[p.id] = d6(); });
+    rounds.push({ kind: rounds.length === 0 ? "round" : "tie", players: group.slice(), rolls });
+    const byVal = {};
+    group.forEach(p => { (byVal[rolls[p.id]] = byVal[rolls[p.id]] || []).push(p); });
+    let result = [];
+    Object.keys(byVal).map(Number).sort((a, b) => b - a).forEach(v => {
+      const g = byVal[v];
+      result = result.concat(g.length === 1 ? g : order(g));   // re-roll within a tie
+    });
+    return result;
+  }
+  return { ordered: order(players.slice()), rounds };
+}
 
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -1013,11 +1050,7 @@ function escapeHtml(s) {
 
 // --------- Start game ---------
 function startGame(players) {
-  // Randomize turn order
-  for (let i = players.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [players[i], players[j]] = [players[j], players[i]];
-  }
+  // Turn order is already decided (dice roll-off in the start handler).
   state.players = players;
   state.turnIdx = 0;
   state.plagueSpent = {};
@@ -1032,7 +1065,6 @@ function startGame(players) {
   renderBoard();
   renderPlayers();
   renderLog();
-  pushLog("log_turn_order", { playerIds: players.map(p => p.id) });
   updateTurnUI();
 }
 
