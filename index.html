@@ -64,7 +64,8 @@
   .player-row { display: flex; gap: 10px; align-items: center; }
   .player-row input[type="text"] { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 15px; }
   .color-swatches { display: flex; gap: 6px; }
-  .swatch { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .swatch { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; line-height: 1;
+            box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.25); }
   .swatch.selected { border-color: var(--ink); transform: scale(1.1); }
   .swatch.taken { opacity: 0.25; cursor: not-allowed; }
   .swatch:focus-visible { outline: 3px solid var(--nile); outline-offset: 2px; }
@@ -121,7 +122,9 @@
 
   /* Token row inside tile */
   .tokens { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; min-height: 18px; }
-  .token { width: 18px; height: 18px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink); font-weight: 700; }
+  .token { width: 21px; height: 21px; border-radius: 50%; border: 2px solid white;
+           box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.35);
+           display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; }
 
   /* ---------- Sidebar ---------- */
   #sidebar { display: flex; flex-direction: column; gap: 12px; }
@@ -129,7 +132,8 @@
   .panel h3 { font-size: 16px; margin-bottom: 10px; color: var(--nile-deep); }
   .player-card { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; margin-bottom: 6px; border: 2px solid transparent; }
   .player-card.active { background: #fff8e0; border-color: var(--dawn); }
-  .player-card .swatch-small { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink);font-weight:700; }
+  .player-card .swatch-small { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;
+            box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.25); }
   .player-card .info { flex: 1; }
   .player-card .name { font-weight: 700; font-size: 14px; }
   .player-card .stats { font-size: 12px; color: #6a6a7a; }
@@ -384,11 +388,13 @@
 // --------- Board layout (30 tiles, FR-1) ---------
 // Plagues distributed in canonical Exodus order.
 // Counts: 10 plagues, 4 manna, 4 rest, 4 edict, 6 path, +Goshen +Promised = 30.
+// Each player is a desert-journey avatar on a coloured game piece. The emoji
+// double-codes identity independently of hue (colour-blind safety, FP-07).
 const PRESET_COLORS = [
-  { id: "coral",   hex: "#e76f51", shape: "●", letter: "A" },
-  { id: "teal",    hex: "#2a9d8f", shape: "▲", letter: "B" },
-  { id: "saffron", hex: "#e9c46a", shape: "■", letter: "C" },
-  { id: "plum",    hex: "#c3a0f0", shape: "◆", letter: "D" },
+  { id: "coral",   hex: "#e76f51", shape: "🐫", letter: "A" },
+  { id: "teal",    hex: "#2a9d8f", shape: "🐑", letter: "B" },
+  { id: "saffron", hex: "#e9c46a", shape: "🦅", letter: "C" },
+  { id: "plum",    hex: "#c3a0f0", shape: "🌵", letter: "D" },
 ];
 
 // PLAGUE_DEFS holds language-neutral data; title/flavor/effect come from i18n.
