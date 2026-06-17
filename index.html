@@ -204,6 +204,27 @@
   #info-body .item-line .ic { font-size: 18px; }
   #info-modal button#info-close { background: var(--nile); color: var(--ink); font-size: 15px; padding: 10px 24px; }
 
+  /* ---------- Roll-off (turn order ceremony) ---------- */
+  #rolloff-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 160; }
+  #rolloff { background: var(--paper); padding: 24px 26px; border-radius: var(--radius); max-width: 420px; width: calc(100% - 36px); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  #rolloff h2 { font-size: 22px; color: var(--nile-deep); margin-bottom: 14px; }
+  #rolloff-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .ro-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; border: 2px solid transparent; background: #fff; transition: background 0.15s, border-color 0.15s, transform 0.15s; }
+  .ro-row.active { background: #fff8e0; }
+  .ro-row.current { border-color: var(--dawn); transform: scale(1.02); }
+  .ro-rank { font-weight: 800; color: var(--nile-deep); width: 20px; text-align: center; }
+  .ro-av { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 17px; line-height: 1;
+           box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.25); }
+  .ro-name { flex: 1; text-align: left; font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ro-die { width: 40px; height: 40px; flex-shrink: 0; background: #fff; border: 2px solid var(--ink); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+  .ro-die .die-face { padding: 6px; }
+  .ro-die .pip { width: 7px; height: 7px; }
+  .ro-dash { color: #bbb; font-weight: 700; }
+  #rolloff-status { min-height: 18px; font-weight: 700; color: var(--dusk); margin: 2px 0; }
+  #rolloff-prompt { min-height: 18px; color: #4a4a5a; font-size: 14px; margin: 0 0 14px; }
+  #rolloff-roll { background: var(--leaf); color: var(--ink); font-size: 17px; padding: 13px 30px; }
+  #rolloff-start { background: var(--dawn); color: var(--ink); font-size: 17px; padding: 13px 30px; }
+
   /* ---------- Win screen ---------- */
   #win-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #fef6e0, #ffd66a); display: flex; align-items: center; justify-content: center; z-index: 200; }
   #win-screen .inner { text-align: center; max-width: 520px; background: var(--paper); padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
@@ -369,6 +390,18 @@
   </div>
 </div>
 
+<!-- =================== ROLL-OFF (turn order) =================== -->
+<div id="rolloff-backdrop" class="hidden" role="dialog" aria-modal="true" aria-labelledby="rolloff-title">
+  <div id="rolloff">
+    <h2 id="rolloff-title">Roll for turn order</h2>
+    <div id="rolloff-list"></div>
+    <p id="rolloff-status"></p>
+    <p id="rolloff-prompt"></p>
+    <button id="rolloff-roll">🎲 Roll</button>
+    <button id="rolloff-start" class="hidden">Start Game</button>
+  </div>
+</div>
+
 <!-- =================== WIN =================== -->
 <div id="win-screen" class="hidden">
   <div class="inner">
@@ -468,9 +501,16 @@ const I18N = {
     log_turn_order: "🎲 Turn order: {order}",
     log_rolloff: "🎲 Roll-off — {detail}",
     log_rolloff_tie: "↻ Tie! Re-roll — {detail}",
+    rolloff_title: "Roll for turn order",
+    rolloff_prompt: "{name} — tap to roll",
+    rolloff_tie_note: "Tie! Those players re-roll.",
+    rolloff_done: "Turn order set!",
+    rolloff_roll: "🎲 Roll",
+    rolloff_start: "Start Game",
     log_rest_skip: "{name} is resting and skips this turn.",
     log_rolled: "{name} rolled a {n}.",
     log_reached_goal: "🌅 {name} reached the Promised Land!",
+    log_overshoot: "🛬 {name} overshot the goal and rebounds {n} step(s).",
     log_rests_wilderness: "{name} rests in the wilderness.",
     log_gathered_manna: "🍞 {name} gathered manna (+1 Faith).",
     log_tax_paid: "📜 {name} pays a Pharaoh's tax (-1 Faith).",
@@ -512,9 +552,9 @@ const I18N = {
     plague_darkness_title: "9. Three Days of Darkness",
     plague_darkness_flavor: "Even the lamps cannot find the path. Better to wait it out.",
     plague_darkness_effect: "Skip your next TWO turns.",
-    plague_passover_title: "10. Passover Night",
-    plague_passover_flavor: "A silent, holy night passes. Households marked with light are kept safe, and at dawn the people of Israel are finally free to leave.",
-    plague_passover_effect: "Gain 2 Faith Tokens AND move forward 3 tiles.",
+    plague_passover_title: "10. Death of the Firstborn",
+    plague_passover_flavor: "At midnight the final plague strikes Egypt's firstborn — but every home marked with lamb's blood is passed over. Israel's households are spared, and at dawn the people are finally free to leave.",
+    plague_passover_effect: "You are passed over: gain 2 Faith Tokens AND move forward 3 tiles.",
     // --- added by merge: winding board + faith-shield rules ---
     tile_label_miracle: "Staff of Moses",
     player_staff_suffix: " · 🪄",
@@ -608,9 +648,16 @@ const I18N = {
     log_turn_order: "🎲 出牌順序:{order}",
     log_rolloff: "🎲 擲骰定先後 — {detail}",
     log_rolloff_tie: "↻ 平手,重擲 — {detail}",
+    rolloff_title: "擲骰決定先後",
+    rolloff_prompt: "輪到 {name} 擲骰",
+    rolloff_tie_note: "平手!這些玩家重擲",
+    rolloff_done: "先後已定!",
+    rolloff_roll: "🎲 擲骰",
+    rolloff_start: "開始遊戲",
     log_rest_skip: "{name} 正在歇息,本回合略過。",
     log_rolled: "{name} 擲出了 {n} 點。",
     log_reached_goal: "🌅 {name} 抵達了應許之地!",
+    log_overshoot: "🛬 {name} 衝過頭,反彈退回 {n} 步。",
     log_rests_wilderness: "{name} 在曠野中歇息。",
     log_gathered_manna: "🍞 {name} 撿到嗎哪(+1 信心)。",
     log_tax_paid: "📜 {name} 向法老繳了稅(-1 信心)。",
@@ -652,9 +699,9 @@ const I18N = {
     plague_darkness_title: "第九災 三日黑暗",
     plague_darkness_flavor: "燈火也照不出路徑,還是耐心等候比較穩妥。",
     plague_darkness_effect: "略過接下來的兩個回合。",
-    plague_passover_title: "第十災 逾越之夜",
-    plague_passover_flavor: "寂靜聖夜悄然而過。以光為記的家戶得到平安,黎明時以色列百姓終於可以啟程離開。",
-    plague_passover_effect: "獲得 2 顆信心代幣,並前進 3 格。",
+    plague_passover_title: "第十災 擊殺長子",
+    plague_passover_flavor: "午夜時分,末一災擊殺埃及一切頭生的;但門上塗了羊血的家戶都被逾越、得以保全。以色列人蒙保守,黎明時終於可以啟程離開。",
+    plague_passover_effect: "你被逾越保全:獲得 2 顆信心代幣,並前進 3 格。",
     // --- 合併新增:蜿蜒地圖 + 信心護盾玩法 ---
     tile_label_miracle: "摩西杖",
     player_staff_suffix: " · 🪄",
@@ -788,6 +835,8 @@ function setLanguage(lang) {
   }
   // Same for the read-only inspect modal, if it happens to be open.
   refreshInfoModal();
+  // And the roll-off ceremony, if it's mid-flow.
+  if (state.ceremony) renderRollOff();
   syncLangSwitchUI();
 }
 
@@ -1008,17 +1057,27 @@ document.getElementById("start-btn").addEventListener("click", () => {
     // anything the user typed.
     players.push({ id: i, name, nameIsDefault, defaultIdx: i + 1, cidx: sel.cidx, color: PRESET_COLORS[sel.cidx], pos: 0, faith: 3, skipTurns: 0, items: [] });
   }
-  // Decide turn order by a dice roll-off (highest first; ties re-roll).
-  const { ordered, rounds } = rollForOrder(players);
-  startGame(ordered);
-  // Show the roll-off transparently: each round's rolls (avatar + value), then
-  // the resulting order on top. Detail is emoji+numbers → language-independent.
+  // Decide turn order with a dice roll-off (highest first; ties re-roll). Real
+  // players get the interactive ceremony; under test automation we resolve it
+  // instantly (same logic + logs) so the suite isn't blocked.
+  if (window.FORCE_ROLLOFF || !navigator.webdriver) {
+    beginRollOff(players);
+  } else {
+    const { ordered, rounds } = rollForOrder(players);
+    startGame(ordered);
+    logRollOff(rounds, ordered);
+  }
+});
+
+// Push the roll-off result to the event log: each round's rolls (avatar+value,
+// language-independent), then the resulting order on top.
+function logRollOff(rounds, ordered) {
   rounds.forEach(rnd => {
     const detail = rnd.players.map(p => `${p.color.shape} ${rnd.rolls[p.id]}`).join(" · ");
     pushLog(rnd.kind === "tie" ? "log_rolloff_tie" : "log_rolloff", { detail });
   });
   pushLog("log_turn_order", { playerIds: ordered.map(p => p.id) });
-});
+}
 
 // Roll a die per player; order by value descending. Players that tie re-roll
 // among themselves (recursively) so the final order is fully broken.
@@ -1043,6 +1102,140 @@ function rollForOrder(players) {
   }
   return { ordered: order(players.slice()), rounds };
 }
+
+// ---- Interactive roll-off ceremony (real players) ----
+// segments[] is the building final order: each entry is a resolved {player} or
+// an unresolved {players:[…]} group that still needs a round to break ties.
+function beginRollOff(players) {
+  state.ceremony = {
+    players: players,
+    segments: [{ players: players.slice() }],
+    active: null, pending: [], rolls: {},
+    rounds: [], roundsRun: 0, busy: false, done: false, isTie: false, ordered: null,
+    reduced: !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches),
+  };
+  document.getElementById("rolloff-backdrop").classList.remove("hidden");
+  startRollOffRound();
+  document.getElementById("rolloff-roll").focus();
+}
+
+function startRollOffRound() {
+  const c = state.ceremony; if (!c) return;
+  const grp = c.segments.find(s => !s.player && s.players.length > 1);
+  if (!grp) { finishRollOff(); return; }
+  c.active = grp;
+  c.pending = grp.players.slice();
+  c.rolls = {};
+  c.isTie = c.roundsRun > 0;
+  renderRollOff();
+}
+
+async function rollOffRollCurrent() {
+  const c = state.ceremony;
+  if (!c || c.busy || c.done || !c.active || c.pending.length === 0) return;
+  c.busy = true;
+  renderRollOff();
+  const p = c.pending[0];
+  const v = 1 + Math.floor(Math.random() * 6);
+  await animateDieInto(document.getElementById("rolloff-die-" + p.id), v);
+  c.rolls[p.id] = v; p._rv = v;
+  c.pending.shift();
+  c.busy = false;
+  renderRollOff();
+  if (c.pending.length === 0) finishRollOffRound();
+}
+
+function finishRollOffRound() {
+  const c = state.ceremony; if (!c) return;
+  c.rounds.push({ kind: c.isTie ? "tie" : "round", players: c.active.players.slice(), rolls: Object.assign({}, c.rolls) });
+  c.roundsRun++;
+  const byVal = {};
+  c.active.players.forEach(p => { (byVal[c.rolls[p.id]] = byVal[c.rolls[p.id]] || []).push(p); });
+  const pieces = [];
+  Object.keys(byVal).map(Number).sort((a, b) => b - a).forEach(v => {
+    const g = byVal[v];
+    if (g.length === 1) { g[0]._rv = v; pieces.push({ player: g[0] }); }
+    else pieces.push({ players: g });
+  });
+  c.segments.splice(c.segments.indexOf(c.active), 1, ...pieces);
+  c.active = null;
+  renderRollOff();
+  if (c.segments.some(s => !s.player)) setTimeout(startRollOffRound, c.reduced ? 0 : 650);
+  else finishRollOff();
+}
+
+function finishRollOff() {
+  const c = state.ceremony; if (!c) return;
+  c.ordered = c.segments.map(s => s.player);
+  c.done = true;
+  renderRollOff();
+  document.getElementById("rolloff-start").focus();
+}
+
+function rollOffStart() {
+  const c = state.ceremony;
+  if (!c || !c.done) return;
+  document.getElementById("rolloff-backdrop").classList.add("hidden");
+  const ordered = c.ordered, rounds = c.rounds;
+  state.ceremony = null;
+  startGame(ordered);
+  logRollOff(rounds, ordered);
+}
+
+function rollOffFlatten() {
+  const out = [];
+  state.ceremony.segments.forEach(seg => {
+    if (seg.player) out.push(seg.player);
+    else seg.players.forEach(p => out.push(p));
+  });
+  return out;
+}
+
+function renderRollOff() {
+  const c = state.ceremony; if (!c) return;
+  document.getElementById("rolloff-title").textContent = t("rolloff_title");
+  const list = document.getElementById("rolloff-list");
+  list.innerHTML = rollOffFlatten().map((p, i) => {
+    const inActive = c.active && c.active.players.indexOf(p) !== -1;
+    const isCurrent = !c.busy && c.active && c.pending[0] === p;
+    const val = inActive ? c.rolls[p.id] : p._rv;
+    const dieHtml = (val !== undefined && val !== null) ? dieFaceHTML(val) : '<span class="ro-dash">—</span>';
+    return `<div class="ro-row${inActive ? " active" : ""}${isCurrent ? " current" : ""}">
+      <span class="ro-rank">${c.done ? (i + 1) : ""}</span>
+      <span class="ro-av" style="background:${p.color.hex}">${p.color.shape}</span>
+      <span class="ro-name">${escapeHtml(p.name)}</span>
+      <span class="ro-die" id="rolloff-die-${p.id}">${dieHtml}</span>
+    </div>`;
+  }).join("");
+  const statusEl = document.getElementById("rolloff-status");
+  const promptEl = document.getElementById("rolloff-prompt");
+  const rollBtn = document.getElementById("rolloff-roll");
+  const startBtn = document.getElementById("rolloff-start");
+  if (c.done) {
+    statusEl.textContent = t("rolloff_done");
+    promptEl.textContent = "";
+    rollBtn.classList.add("hidden");
+    startBtn.classList.remove("hidden");
+    startBtn.textContent = t("rolloff_start");
+  } else {
+    const cur = c.pending[0];
+    statusEl.textContent = c.isTie ? t("rolloff_tie_note") : "";
+    promptEl.textContent = cur ? t("rolloff_prompt", { name: cur.name }) : "";
+    rollBtn.classList.remove("hidden");
+    startBtn.classList.add("hidden");
+    rollBtn.textContent = t("rolloff_roll");
+    rollBtn.disabled = c.busy || !cur;
+  }
+}
+
+document.getElementById("rolloff-roll").addEventListener("click", rollOffRollCurrent);
+document.getElementById("rolloff-start").addEventListener("click", rollOffStart);
+document.getElementById("rolloff-backdrop").addEventListener("keydown", e => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  e.preventDefault();
+  if (state.ceremony && state.ceremony.done) rollOffStart();
+  else rollOffRollCurrent();
+});
 
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -1329,7 +1522,10 @@ async function onRoll() {
   diceEl.classList.remove("rolling");
   pushLog("log_rolled", { playerId: p.id, n: roll });
 
-  // Move tile-by-tile, capped at goal (overshoot still wins per FR-6)
+  // Move tile-by-tile. You must land EXACTLY on the goal (29); overshooting
+  // bounces back off the goal by the surplus (aeroplane-chess style).
+  const needed = 29 - p.pos;
+  const overshoot = Math.max(0, roll - needed);
   const target = Math.min(p.pos + roll, 29);
   const stepDelay = reducedMotion ? 0 : 140;
   while (p.pos < target) {
@@ -1337,9 +1533,20 @@ async function onRoll() {
     renderTokens();
     if (stepDelay) await sleep(stepDelay);
   }
+  if (overshoot > 0) {
+    if (stepDelay) await sleep(stepDelay * 2);   // pause at the goal before rebounding
+    let back = overshoot;
+    while (back > 0) {
+      p.pos -= 1;
+      back -= 1;
+      renderTokens();
+      if (stepDelay) await sleep(stepDelay);
+    }
+    pushLog("log_overshoot", { playerId: p.id, n: overshoot });
+  }
   renderPlayers();
 
-  // Win check after movement
+  // Win only on an exact landing (overshoot rebounded away above).
   if (p.pos >= 29) {
     pushLog("log_reached_goal", { playerId: p.id });
     state.busy = false;
@@ -1366,16 +1573,28 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Render the dice as a real die face (pips) for the given value 1–6.
 const PIP_MAP = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-function renderDie(v) {
-  const diceEl = document.getElementById("dice");
-  if (!diceEl) return;
+function dieFaceHTML(v) {
   const on = new Set(PIP_MAP[v] || []);
   const red = (v === 1 || v === 4);              // 1 & 4 are red on a real die
   const pipCls = "pip" + (red ? " red" : "") + (v === 1 ? " big" : "");
   let cells = "";
   for (let i = 0; i < 9; i++) cells += `<span class="cell">${on.has(i) ? `<span class="${pipCls}"></span>` : ""}</span>`;
-  diceEl.innerHTML = `<span class="die-face">${cells}</span>`;
+  return `<span class="die-face">${cells}</span>`;
+}
+function renderDie(v) {
+  const diceEl = document.getElementById("dice");
+  if (!diceEl) return;
+  diceEl.innerHTML = dieFaceHTML(v);
   diceEl.setAttribute("aria-label", String(v));
+}
+// Spin a die element through random faces, then settle on finalV.
+async function animateDieInto(el, finalV) {
+  if (!el) return;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduced) {
+    for (let i = 0; i < 6; i++) { el.innerHTML = dieFaceHTML(1 + Math.floor(Math.random() * 6)); await sleep(55); }
+  }
+  el.innerHTML = dieFaceHTML(finalV);
 }
 
 // --------- Tile resolution ---------
