@@ -519,7 +519,7 @@ const I18N = {
     log_plague_fires: "⚡ {title} fires for {name}.",
     log_flies_others: "🪰 Others pushed back 1.",
     log_hail_sweep: "🧊 Hail sweeps players at tile ≤ {cutoff} back 3.",
-    log_passover_buff: "🌅 {name} gains +2 Faith and advances +3 tiles.",
+    log_passover_buff: "🌅 {name} is passed over and blessed (+3 Faith).",
     color_coral: "Coral",
     color_teal: "Teal",
     color_saffron: "Saffron",
@@ -554,7 +554,7 @@ const I18N = {
     plague_darkness_effect: "Skip your next TWO turns.",
     plague_passover_title: "10. Death of the Firstborn",
     plague_passover_flavor: "At midnight the final plague strikes Egypt's firstborn — but every home marked with lamb's blood is passed over. Israel's households are spared, and at dawn the people are finally free to leave.",
-    plague_passover_effect: "You are passed over: gain 2 Faith Tokens AND move forward 3 tiles.",
+    plague_passover_effect: "You are passed over and spared — gain 3 Faith Tokens.",
     // --- added by merge: winding board + faith-shield rules ---
     tile_label_miracle: "Staff of Moses",
     player_staff_suffix: " · 🪄",
@@ -666,7 +666,7 @@ const I18N = {
     log_plague_fires: "⚡ {title} 在 {name} 身上發動。",
     log_flies_others: "🪰 其他玩家各退 1 格。",
     log_hail_sweep: "🧊 冰雹掃過第 ≤ {cutoff} 格的所有玩家,各退 3 格。",
-    log_passover_buff: "🌅 {name} 獲得 +2 信心並前進 3 格。",
+    log_passover_buff: "🌅 {name} 蒙逾越保全、得著祝福(+3 信心)。",
     color_coral: "珊瑚紅",
     color_teal: "湖水綠",
     color_saffron: "藏紅黃",
@@ -701,7 +701,7 @@ const I18N = {
     plague_darkness_effect: "略過接下來的兩個回合。",
     plague_passover_title: "第十災 擊殺長子",
     plague_passover_flavor: "午夜時分,末一災擊殺埃及一切頭生的;但門上塗了羊血的家戶都被逾越、得以保全。以色列人蒙保守,黎明時終於可以啟程離開。",
-    plague_passover_effect: "你被逾越保全:獲得 2 顆信心代幣,並前進 3 格。",
+    plague_passover_effect: "你被逾越保全、蒙福——獲得 3 顆信心代幣。",
     // --- 合併新增:蜿蜒地圖 + 信心護盾玩法 ---
     tile_label_miracle: "摩西杖",
     player_staff_suffix: " · 🪄",
@@ -1721,8 +1721,10 @@ function applyPlagueEffect(plague, p) {
       p.skipTurns += 2;
       break;
     case "passover":
-      p.faith += 2;
-      p.pos = Math.min(29, p.pos + 3);
+      // 10th plague (death of the firstborn): the player is passed over and
+      // blessed. No forced advance — it sits one step from the goal, so a "+3"
+      // would clash with the exact-roll finish; a Faith blessing is the reward.
+      p.faith += 3;
       pushLog("log_passover_buff", { playerId: p.id });
       break;
   }
