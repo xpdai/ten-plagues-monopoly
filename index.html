@@ -78,12 +78,14 @@
   .header-bar button.new-game { background: #fff; border: 2px solid #ddd; }
 
   /* ---------- Board (winding trail) ---------- */
-  #board-wrap { background: radial-gradient(circle at 30% 20%, #fff7e6 0%, var(--paper) 60%); padding: 12px; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  #board-wrap { background: radial-gradient(circle at 30% 20%, #fff7e6 0%, var(--paper) 60%); padding: 12px; border-radius: var(--radius); box-shadow: var(--shadow); overflow: auto; -webkit-overflow-scrolling: touch; }
+  /* Sizer takes the board's *scaled* footprint so #board-wrap can scroll/pan it
+     when the board is bigger than the viewport (phones). Centered when it fits. */
+  #board-fit { position: relative; margin: 0 auto; }
   #board {
     position: relative;
     width: 860px;
     height: 540px;
-    margin: 0 auto;
     transform-origin: top left;  /* JS fitBoard() scales this to fit the container */
     background:
       radial-gradient(circle at 18% 78%, rgba(123,196,127,0.18) 0 9%, transparent 9%),
@@ -306,7 +308,9 @@
   </div>
 
   <div id="board-wrap">
-    <div id="board" aria-label="Game board"></div>
+    <div id="board-fit">
+      <div id="board" aria-label="Game board"></div>
+    </div>
   </div>
 
   <div id="sidebar">
@@ -611,34 +615,34 @@ const I18N = {
     color_saffron: "藏紅黃",
     color_plum: "梅子紫",
     swatch_aria: "{color}({shape})— 給玩家 {n}",
-    plague_blood_title: "1. 尼羅河變紅",
+    plague_blood_title: "第一災 尼羅河變紅",
     plague_blood_flavor: "河水染成泥土的顏色,岸邊的水罐一只只空著。",
     plague_blood_effect: "失去 1 顆信心代幣。",
-    plague_frogs_title: "2. 青蛙遍地",
+    plague_frogs_title: "第二災 青蛙遍地",
     plague_frogs_flavor: "笑臉青蛙從每一條路上跳過,你一個踉蹌打滑跌倒。",
     plague_frogs_effect: "後退 2 格。",
-    plague_lice_title: "3. 蝨子與蚊蚋",
+    plague_lice_title: "第三災 蝨子與蚊蚋",
     plague_lice_flavor: "塵土叫人發癢,你坐下抓癢,腳下的路只能耐心等候。",
     plague_lice_effect: "下一回合略過。",
-    plague_flies_title: "4. 蒼蠅成群",
+    plague_flies_title: "第四災 蒼蠅成群",
     plague_flies_flavor: "嗡嗡作響的雲團掠過 — 歌珊地的人卻得以倖免。",
     plague_flies_effect: "其他每位玩家各後退 1 格。",
-    plague_livestock_title: "5. 牲畜瘟疫",
+    plague_livestock_title: "第五災 牲畜瘟疫",
     plague_livestock_flavor: "群獸靜默下來,法老的牲畜欄空蕩無聲。",
     plague_livestock_effect: "失去 2 顆信心代幣。",
-    plague_boils_title: "6. 膿瘡",
+    plague_boils_title: "第六災 膿瘡",
     plague_boils_flavor: "圓點似的腫包紛紛冒出,你需要歇下來休養。",
     plague_boils_effect: "下一回合略過,並失去 1 顆信心代幣。",
-    plague_hail_title: "7. 冰雹風暴",
+    plague_hail_title: "第七災 冰雹風暴",
     plague_hail_flavor: "圓圓的藍色冰珠自天而降,劈哩啪啦灑滿田野。",
     plague_hail_effect: "與你同格或落在你後方的玩家(含你自己)皆後退 3 格。",
-    plague_locusts_title: "8. 蝗蟲",
+    plague_locusts_title: "第八災 蝗蟲",
     plague_locusts_flavor: "傻氣的綠色雲團壓境,把田裡的收成一掃而空。",
     plague_locusts_effect: "失去你所有的信心代幣。",
-    plague_darkness_title: "9. 三日黑暗",
+    plague_darkness_title: "第九災 三日黑暗",
     plague_darkness_flavor: "燈火也照不出路徑,還是耐心等候比較穩妥。",
     plague_darkness_effect: "略過接下來的兩個回合。",
-    plague_passover_title: "10. 逾越之夜",
+    plague_passover_title: "第十災 逾越之夜",
     plague_passover_flavor: "寂靜聖夜悄然而過。以光為記的家戶得到平安,黎明時以色列百姓終於可以啟程離開。",
     plague_passover_effect: "獲得 2 顆信心代幣,並前進 3 格。",
     // --- 合併新增:蜿蜒地圖 + 信心護盾玩法 ---
@@ -733,8 +737,7 @@ function plagueT(p, field) { return t(`plague_${p.id}_${field}`); }
 function colorName(c) { return t(`color_${c.id}`); }
 function tileLabel(tile) {
   if (tile.type === "plague") {
-    const p = PLAGUE_DEFS[tile.plague];
-    return `${p.n}. ${plagueT(p, "title").replace(/^\d+\.\s*/, "")}`;
+    return plagueT(PLAGUE_DEFS[tile.plague], "title");
   }
   return t(TILE_LABEL_KEY[tile.type] || "tile_label_path");
 }
@@ -1066,7 +1069,7 @@ function renderBoard() {
     if (tile.type === "plague") {
       const p = PLAGUE_DEFS[tile.plague];
       icon = p.icon;
-      label = `${p.n}. ${plagueT(p, "title").replace(/^\d+\.\s*/, "")}`;
+      label = plagueT(p, "title");
     } else {
       icon = tile.icon;
       label = tileLabel(tile);
@@ -1091,16 +1094,22 @@ function renderBoard() {
 // Desktop keeps scale 1 (pixel-identical to before).
 function fitBoard() {
   const wrap = document.getElementById("board-wrap");
+  const fit = document.getElementById("board-fit");
   const board = document.getElementById("board");
-  if (!wrap || !board) return;
+  if (!wrap || !fit || !board) return;
   const cs = getComputedStyle(wrap);
   const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   const avail = wrap.clientWidth - padX;
   if (avail <= 0) return;              // hidden / not laid out yet
-  const s = Math.min(1, avail / 860);
+  let s = Math.min(1, avail / 860);
+  // On phones, don't shrink tiles below a comfortable tap size — keep the board
+  // larger and let #board-wrap pan horizontally instead.
+  if (window.matchMedia && window.matchMedia("(max-width: 480px)").matches) {
+    s = Math.max(s, 0.6);             // ~42px tiles
+  }
   board.style.transform = s < 1 ? `scale(${s})` : "none";
-  wrap.style.height = (540 * s + padY) + "px";
+  fit.style.width = (860 * s) + "px";
+  fit.style.height = (540 * s) + "px";
 }
 window.addEventListener("resize", fitBoard);
 
