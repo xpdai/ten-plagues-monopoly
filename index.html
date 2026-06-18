@@ -51,6 +51,7 @@
   .count-row{display:flex;gap:10px;justify-content:center;}
   .count-row button{min-width:60px;background:#fff;border:2px solid #ddd;}
   .count-row button.active{background:var(--nile);border-color:var(--nile-deep);}
+  .count-hint{text-align:center;color:#8a7a5a;font-size:13px;margin:8px 0 0;min-height:16px;}
   .player-rows{display:flex;flex-direction:column;gap:10px;}
   .player-row{display:flex;gap:10px;align-items:center;}
   .player-row input[type=text]{flex:1;min-width:0;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;}
@@ -202,7 +203,7 @@
   <div class="setup-group">
     <h3>進行方式</h3>
     <div class="choice-row" id="submode-row">
-      <button data-sub="host"><div class="c-title">🧑‍🏫 關主模式</div><div class="c-desc">與關主（電腦）比賽闖關</div></button>
+      <button data-sub="host"><div class="c-title">🧑‍🏫 關主模式</div><div class="c-desc">與電腦關主同場競賽（限遊戲軟體模式）</div></button>
       <button data-sub="vs"><div class="c-title">⚔️ 玩家對戰模式</div><div class="c-desc">指定同場玩家對戰、可換格</div></button>
     </div>
   </div>
@@ -210,8 +211,9 @@
   <div class="setup-group">
     <h3>幾位玩家？</h3>
     <div class="count-row" id="count-row">
-      <button data-n="2">2</button><button data-n="3">3</button><button data-n="4">4</button>
+      <button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button><button data-n="4">4</button>
     </div>
+    <p class="count-hint" id="count-hint"></p>
   </div>
 
   <div class="setup-group">
@@ -278,6 +280,10 @@ const AVATARS=[
   {id:"eagle",hex:"#e9c46a",emoji:"🦅",name:"老鷹"},
   {id:"cactus",hex:"#c3a0f0",emoji:"🌵",name:"仙人掌"},
 ];
+// The 電腦關主 (computer host) — only present in 遊戲軟體模式 + 關主模式.
+const HOST_ID=100;
+const HOST_AV={id:"host",hex:"#5b4636",emoji:"🧑‍🏫",name:"關主"};
+function isHostGame(){return state.mode==="soft"&&state.submode==="host";}
 
 // Each tile: plan(mode, sub) -> { kind, text, swap?, steps?, turns? }
 // kind ∈ info|maintain|versus|move|skip|chance|penalty|advance|safe|start|goal
@@ -369,10 +375,26 @@ const state=window.state={
 // ============================================================
 // Setup
 // ============================================================
+function normalizeSetup(){
+  // 大地遊戲模式沒有電腦關主 → 鎖住關主模式，自動切到玩家對戰。
+  if(state.mode==="land" && state.submode==="host") state.submode="vs";
+  // 只有「遊戲軟體模式 + 關主模式」才能一個人玩（與電腦關主對戰）。
+  if(!isHostGame() && state.count<2) state.count=2;
+}
 function renderSetup(){
+  normalizeSetup();
+  const solo=isHostGame();
   document.querySelectorAll("#mode-row button").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));
-  document.querySelectorAll("#submode-row button").forEach(b=>b.classList.toggle("active",b.dataset.sub===state.submode));
-  document.querySelectorAll("#count-row button").forEach(b=>b.classList.toggle("active",+b.dataset.n===state.count));
+  document.querySelectorAll("#submode-row button").forEach(b=>{
+    b.classList.toggle("active",b.dataset.sub===state.submode);
+    if(b.dataset.sub==="host") b.disabled=(state.mode==="land");
+  });
+  document.querySelectorAll("#count-row button").forEach(b=>{
+    b.classList.toggle("active",+b.dataset.n===state.count);
+    if(b.dataset.n==="1") b.disabled=!solo;
+  });
+  const hint=document.getElementById("count-hint");
+  if(hint) hint.textContent=solo?"關主模式可一人對戰電腦關主，或多人同場競賽。":(state.mode==="land"?"大地遊戲模式為玩家對戰，至少 2 人。":"玩家對戰模式至少 2 人。");
   const rows=document.getElementById("player-rows"); rows.innerHTML="";
   state.picks=state.picks.slice(0,state.count);
   for(let i=0;i<state.count;i++){
@@ -402,8 +424,8 @@ function refreshSwatches(){
   });
 }
 document.getElementById("mode-row").addEventListener("click",e=>{const b=e.target.closest("button[data-mode]");if(b){state.mode=b.dataset.mode;renderSetup();}});
-document.getElementById("submode-row").addEventListener("click",e=>{const b=e.target.closest("button[data-sub]");if(b){state.submode=b.dataset.sub;renderSetup();}});
-document.getElementById("count-row").addEventListener("click",e=>{const b=e.target.closest("button[data-n]");if(b){state.count=+b.dataset.n;renderSetup();}});
+document.getElementById("submode-row").addEventListener("click",e=>{const b=e.target.closest("button[data-sub]");if(b&&!b.disabled){state.submode=b.dataset.sub;renderSetup();}});
+document.getElementById("count-row").addEventListener("click",e=>{const b=e.target.closest("button[data-n]");if(b&&!b.disabled){state.count=+b.dataset.n;renderSetup();}});
 document.getElementById("player-rows").addEventListener("click",e=>{const sw=e.target.closest(".swatch");if(!sw||sw.classList.contains("taken"))return;const row=+sw.dataset.row;state.picks[row]={...state.picks[row],av:+sw.dataset.av};refreshSwatches();});
 document.getElementById("player-rows").addEventListener("keydown",e=>{const sw=e.target.closest&&e.target.closest(".swatch");if(sw&&(e.key==="Enter"||e.key===" ")){e.preventDefault();sw.click();}});
 document.getElementById("player-rows").addEventListener("input",e=>{if(e.target.tagName==="INPUT"){state.picks[+e.target.dataset.idx].name=e.target.value;}});
@@ -429,6 +451,10 @@ async function startGame(players){
   // simple dice roll-off for turn order (highest first, ties keep order)
   players.forEach(p=>p._roll=1+Math.floor(Math.random()*6));
   players.sort((a,b)=>b._roll-a._roll);
+  // 關主模式：加入電腦關主一起競賽，排在所有玩家之後（人類玩家先手）。
+  if(isHostGame()){
+    players.push({id:HOST_ID,name:"關主",av:HOST_AV,avIdx:-1,pos:0,score:0,skipTurns:0,maintaining:null,shoesOff:false,isHost:true,_roll:1+Math.floor(Math.random()*6)});
+  }
   state.players=players; state.turnIdx=0; state.busy=false; state.log=[];
   document.getElementById("setup").style.display="none";
   document.getElementById("game").classList.add("active");
@@ -512,9 +538,16 @@ function updateTurnUI(){
   renderPlayers(); renderTokens();
   const p=currentPlayer();
   document.getElementById("turn-name").textContent=p?`輪到 ${p.av.emoji} ${p.name}`:"—";
-  document.getElementById("roll-btn").disabled=state.busy;
+  document.getElementById("roll-btn").disabled=state.busy||!!(p&&p.isHost);
 }
-function advanceTurn(){state.turnIdx=(state.turnIdx+1)%state.players.length;updateTurnUI();}
+function advanceTurn(){state.turnIdx=(state.turnIdx+1)%state.players.length;updateTurnUI();maybeHostTurn();}
+function gameRunning(){return document.getElementById("game").classList.contains("active")&&document.getElementById("win-screen").classList.contains("hidden");}
+function maybeHostTurn(){
+  const p=currentPlayer();
+  if(!p||!p.isHost||state.busy||!gameRunning())return;
+  if(navigator.webdriver) hostTurn(); else setTimeout(hostTurn,650);
+}
+function hostPause(ms){return navigator.webdriver?Promise.resolve():sleep(ms);}
 
 // ============================================================
 // Dice
@@ -538,7 +571,7 @@ document.addEventListener("keydown",e=>{
 
 async function onRoll(){
   if(state.busy)return;
-  const p=currentPlayer(); if(!p)return;
+  const p=currentPlayer(); if(!p||p.isHost)return;
   if(p.skipTurns>0){pushLog(`💤 ${p.name} 暫停，跳過這一輪。`);p.skipTurns-=1;advanceTurn();return;}
   if(p.maintaining){ pushLog(`🧘 ${p.name} 結束了「${p.maintaining.name}」的維持動作。`); p.maintaining=null; }
   state.busy=true; updateTurnUI();
@@ -552,6 +585,56 @@ async function onRoll(){
   await resolveTile(p);
   if(p.pos>=GOAL_IDX){state.busy=false;return win(p);}
   state.busy=false; advanceTurn();
+}
+
+// The computer 關主 plays its own turn automatically (rolls, moves, auto-clears its tile).
+async function hostTurn(){
+  const p=currentPlayer();
+  if(!p||!p.isHost||state.busy||!gameRunning())return;
+  state.busy=true; updateTurnUI();
+  if(p.skipTurns>0){pushLog(`💤 ${p.name} 暫停，跳過這一輪。`);p.skipTurns-=1;state.busy=false;return advanceTurn();}
+  if(p.maintaining){p.maintaining=null;}
+  await hostPause(450);
+  const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dice=document.getElementById("dice"); dice.classList.add("rolling");
+  if(!reduced&&!navigator.webdriver){for(let i=0;i<6;i++){renderDie(1+Math.floor(Math.random()*6));await sleep(55);}}
+  const roll=1+Math.floor(Math.random()*6); renderDie(roll); dice.classList.remove("rolling");
+  pushLog(`🎲 ${p.name} 擲出了 ${roll} 點。`);
+  await movePlayer(p,roll);
+  if(p.pos>=GOAL_IDX){state.busy=false;return win(p);}
+  await hostPause(320);
+  await autoResolveTile(p);
+  if(p.pos>=GOAL_IDX){state.busy=false;return win(p);}
+  state.busy=false; advanceTurn();
+}
+// Resolve the host's landed tile with no modal — apply the effect and log it.
+async function autoResolveTile(host){
+  const tile=BOARD[host.pos];
+  const plan=tile.plan(state.mode,state.submode);
+  const kind=plan.kind;
+  if(state.mode==="soft"&&plan.game){ pushLog(`🧑‍🏫 ${host.name} 完成了「${tile.name}」的挑戰。`); renderPlayers(); return; }
+  if(kind==="versus"){ pushLog(`🧑‍🏫 ${host.name} 完成了「${tile.name}」的闖關。`); renderPlayers(); return; }
+  if(kind==="skip"){ host.skipTurns+=plan.turns; pushLog(`💤 ${host.name} 將暫停 ${plan.turns} 輪。`); renderPlayers(); return; }
+  if(kind==="move"){ applyMove(host,plan.steps); pushLog(`🚫 ${host.name} 後退 ${Math.abs(plan.steps)} 格。`); return; }
+  if(kind==="maintain"){ pushLog(`🧑‍🏫 ${host.name} 通過了「${tile.name}」。`); renderPlayers(); return; }
+  if(kind==="penalty"){
+    const v=state.players[Math.floor(Math.random()*state.players.length)];
+    v.score-=1; renderPlayers(); pushLog(`🏇 追兵抓到了 ${v.av.emoji}${v.name}，扣 1 分。`); return;
+  }
+  if(kind==="advance"){
+    if(Math.random()<0.5 && host.pos<GOAL_IDX){ host.pos++; renderTokens(); renderPlayers(); pushLog(`🦗 ${host.name} 前進一格。`);
+      if(host.pos<GOAL_IDX) await autoResolveTile(host); }
+    return;
+  }
+  if(kind==="chance"){
+    const card=1+Math.floor(Math.random()*7);
+    if(card===7){ host.skipTurns+=1; renderPlayers(); pushLog(`🎴 ${host.name} 抽到暫停一輪。`); return; }
+    pushLog(`🎴 ${host.name} 抽到前進 ${card} 步。`); applyMove(host,card);
+    if(host.pos<GOAL_IDX) await autoResolveTile(host);
+    return;
+  }
+  // info / safe / goal / shoes — just pass through.
+  pushLog(`🧑‍🏫 ${host.name} 通過了「${tile.name}」。`); renderPlayers();
 }
 
 // Move with exact-roll finish: overshoot rebounds off the goal.
@@ -929,7 +1012,7 @@ function playCheer(){
 }
 function win(winner){
   playCheer();
-  pushLog(`🌟 ${winner.av.emoji}${winner.name} 抵達終點，向耶和華歌唱！`,"hi");
+  pushLog(winner.isHost?`🧑‍🏫 ${winner.av.emoji}${winner.name} 搶先抵達終點，玩家們再接再厲！`:`🌟 ${winner.av.emoji}${winner.name} 抵達終點，向耶和華歌唱！`,"hi");
   document.getElementById("winner-name").textContent=`${winner.av.emoji} ${winner.name}`;
   const sorted=[...state.players].sort((a,b)=>{if(a.id===winner.id)return -1;if(b.id===winner.id)return 1;if(b.pos!==a.pos)return b.pos-a.pos;return b.score-a.score;});
   document.getElementById("standings").innerHTML=sorted.map((p,i)=>`<div class="row"><span><strong>${i+1}.</strong> ${p.av.emoji} ${escapeHtml(p.name)}</span><span>第 ${BOARD[p.pos].n} 站 · ⭐ ${p.score}</span></div>`).join("");
@@ -954,7 +1037,7 @@ function backToSetup(){
 document.getElementById("help-btn").addEventListener("click",()=>{
   openInfo("📖","玩法說明",MODE_LABEL[state.mode]+" · "+SUB_LABEL[state.submode],
     "🎯 目標：輪流擲骰前進，最先「剛好」抵達終點（第 26 站）者獲勝；點數超過終點會像飛行棋一樣反彈退回。\n\n"+
-    "🎮 模式：\n• 遊戲軟體模式：在螢幕上玩迷你遊戲。\n• 大地遊戲模式：在實體場地做動作闖關。\n搭配「關主模式」（與電腦比）或「玩家對戰模式」（指定同場玩家對戰）。\n\n"+
+    "🎮 模式：\n• 遊戲軟體模式：在螢幕上玩迷你遊戲。\n• 大地遊戲模式：在實體場地做動作闖關。\n搭配「關主模式」（電腦關主 🧑‍🏫 也下場一起繞圈競賽，可一人對戰）或「玩家對戰模式」（指定同場玩家對戰）。大地遊戲模式沒有電腦關主，僅限玩家對戰。\n\n"+
     "⚔️ 對戰格：指定一位玩家比賽，贏的一方可選擇是否與對手互換格子（換到對方位置、但不執行該格任務）。\n\n"+
     "🎴 機會與命運（法老放行）：抽卡決定前進步數，或暫停一輪。\n🏇 追兵：隨機抽一位玩家扣 1 分。\n🧘 大地維持動作：會在玩家卡顯示「維持中」，輪到你時自動解除。\n\n"+
     "💡 點任一格可查看該格任務；點玩家卡可查看狀態。");
