@@ -152,6 +152,12 @@
   .mini-rash{position:absolute;font-size:26px;line-height:1;cursor:pointer;user-select:none;}
   .mini-person{position:absolute;font-size:26px;line-height:1;cursor:grab;touch-action:none;}
   .mini-field,.mini-sea,.mini-trace{touch-action:none;}
+  .mini-arrange{display:flex;gap:10px;justify-content:center;}
+  .mini-arrange .mini-slot{width:60px;height:60px;font-size:30px;background:#fff;border:2px solid #ddd;border-radius:12px;padding:0;}
+  .mini-arrange .mini-slot.sel{border-color:var(--nile);background:#eaf6ff;transform:scale(1.06);}
+  .mini-photo{display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .mini-photo .mini-file{font-size:14px;}
+  .mini-photo-prev img{max-width:220px;max-height:150px;border-radius:8px;}
 
   /* ---------- Win ---------- */
   #win-screen{position:fixed;inset:0;background:linear-gradient(135deg,#fef6e0,#ffd66a);display:flex;align-items:center;justify-content:center;z-index:200;}
@@ -287,7 +293,7 @@ const TILES=[
   {n:7,name:"杖變蛇",icon:"🐍",
    plan:(m)=>m==="land"?{kind:"maintain",text:"杖變成了蛇！像蛇一樣在地上蠕動，維持到下一輪任務開始前。"}:{kind:"solo",game:"trace",text:"描線：用滑鼠／手指沿著彎曲的線從左滑到右，盡量不要超出線外。"}},
   {n:8,name:"河水變血",icon:"🩸",cls:"versus",
-   plan:(m,s)=>({kind:"versus",swap:true,text:m==="land"?"與對手比賽找出紅色的東西，最快者勝。"+(s==="vs"?"勝者可選擇是否互換格子。":""):"找出紅色物品並拍照上傳。"+(s==="vs"?"與對手比快，最快者勝，勝者可選擇是否互換格子。":"上傳成功即可過關。")})},
+   plan:(m,s)=>({kind:"versus",swap:true,game:(m==="soft"&&s==="host")?"photo":undefined,text:m==="land"?"與對手比賽找出紅色的東西，最快者勝。"+(s==="vs"?"勝者可選擇是否互換格子。":""):"找出紅色物品並拍照上傳。"+(s==="vs"?"與對手比快，最快者勝，勝者可選擇是否互換格子。":"上傳成功即可過關。")})},
   {n:9,name:"法老心剛硬",icon:"🗿",cls:"skip",
    plan:()=>({kind:"skip",turns:1,text:"法老的心剛硬。暫停一輪。"})},
   {n:10,name:"蛙災",icon:"🐸",cls:"versus",
@@ -305,13 +311,13 @@ const TILES=[
   {n:16,name:"蝗災",icon:"🦗",
    plan:(m)=>m==="land"?{kind:"info",text:"蝗蟲鋪天蓋地！匍匐前進到關主指定的位置（此關不對戰）。"}:{kind:"advance",text:"蝗蟲過境。你可以選擇是否前進到下一格，並進行下一格的任務。"}},
   {n:17,name:"羔羊血塗門楣",icon:"🚪",
-   plan:(m)=>({kind:"info",text:m==="land"?"關主在每位玩家臉上畫上記號（此關不對戰）。":"拿起紅色油漆刷（滑鼠），把雙開門的門楣與門框塗上記號（此關不對戰）。"})},
+   plan:(m)=>m==="land"?{kind:"info",text:"關主在每位玩家臉上畫上記號（此關不對戰）。"}:{kind:"solo",game:"paint",text:"拿起紅色油漆刷（滑鼠／手指），把門楣與門框塗上羊血記號（此關不對戰）。"}},
   {n:18,name:"長子之死",icon:"🌑",
    plan:(m)=>m==="land"?{kind:"maintain",text:"長子之死的夜晚。躺在地板上，維持到下一輪任務開始前（此關不對戰）。"}:{kind:"skip",turns:1,text:"長子之死的夜晚。暫停一輪。"}},
   {n:19,name:"法老放行",sub:"機會與命運",icon:"🎴",cls:"chance",
    plan:()=>({kind:"chance",text:"法老終於放行！抽一張「機會與命運」卡，決定你的去向。"})},
   {n:20,name:"雲柱火柱隨行",icon:"☁️",
-   plan:(m)=>({kind:"info",text:m==="land"?"兩人三腳走到關主指定地點（此關不對戰）；落單的玩家則向左轉 5 圈、向右轉 5 圈，再跑直線到目的地。":"把散落一地的雲柱、火柱與人們排成「雲－人－火」的順序即可過關（此關不對戰）。"})},
+   plan:(m)=>m==="land"?{kind:"info",text:"兩人三腳走到關主指定地點（此關不對戰）；落單的玩家則向左轉 5 圈、向右轉 5 圈，再跑直線到目的地。"}:{kind:"solo",game:"arrange",text:"把雲柱、火柱與人排成「☁️ 雲 － 🧍 人 － 🔥 火」的順序即可過關（此關不對戰）。"}},
   {n:21,name:"追兵",icon:"🏇",cls:"move",
    plan:(m)=>({kind:"penalty",text:m==="land"?"法老的追兵來了！限時 15 秒鬼抓人，被抓到的玩家扣 1 分。":"法老的追兵來了！電腦隨機抽中一名玩家扣 1 分。"})},
   {n:22,name:"紅海分開",icon:"🌊",
@@ -800,6 +806,35 @@ const MINIGAMES={
       if(y<H*0.26-4||y>H*0.74-26){ if(!cur._t){cur._t=true;touches++;prog.textContent="別碰到海水（已碰 "+touches+" 次）";setTimeout(()=>{if(cur)cur._t=false;},250);} }
       if(x>=r.width-34){ cur.remove(); people--; prog.textContent="剩 "+people+" 人"; cur=null; drag=false; spawn(); } });
     spawn();
+  }},
+  paint:{mount(stage,done){
+    const W=300,H=170,cell=17, cols=Math.floor(W/cell), rows=Math.floor(H/cell);
+    stage.innerHTML='<div class="mini-paint" style="position:relative;width:'+(cols*cell)+'px;max-width:100%;height:'+(rows*cell)+'px;margin:0 auto;background:#e9dcc2;border-radius:8px;overflow:hidden;touch-action:none"></div><div class="mini-progress">按住，在門框與門楣上「塗」滿羊血。</div>';
+    const box=stage.querySelector(".mini-paint"),prog=stage.querySelector(".mini-progress");
+    const need=new Set();
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ if(r<2||c<2||c>=cols-2){ need.add(r+","+c);
+      const d=document.createElement("div"); d.dataset.k=r+","+c; d.style.cssText="position:absolute;left:"+(c*cell)+"px;top:"+(r*cell)+"px;width:"+cell+"px;height:"+cell+"px;background:#bda878;"; box.appendChild(d); } }
+    const target=Math.ceil(need.size*0.85); let painted=0,down=false;
+    const paint=e=>{ if(!down)return; const r=box.getBoundingClientRect(),cc=Math.floor((e.clientX-r.left)/cell),rr=Math.floor((e.clientY-r.top)/cell),k=rr+","+cc;
+      const el=box.querySelector('[data-k="'+k+'"]'); if(el&&!el._p){ el._p=true; el.style.background="#d12f2f"; painted++; prog.textContent="塗門框（"+painted+" / "+target+"）"; if(painted>=target)done({score:1000}); } };
+    box.addEventListener("pointerdown",e=>{down=true;paint(e);});
+    document.addEventListener("pointerup",()=>down=false);
+    box.addEventListener("pointermove",paint);
+  }},
+  arrange:{mount(stage,done){
+    const goal="☁️🧍🔥"; let items; do{ items=shuffle(["☁️","🧍","🔥"]); }while(items.join("")===goal);
+    let sel=-1;
+    stage.innerHTML='<div class="mini-arrange"></div><div class="mini-progress">點兩個格子互換，排成「☁️ － 🧍 － 🔥」。</div>';
+    const box=stage.querySelector(".mini-arrange");
+    function render(){ box.innerHTML=""; items.forEach((it,i)=>{ const b=document.createElement("button"); b.className="mini-slot"+(sel===i?" sel":""); b.textContent=it; b.onclick=()=>pick(i); box.appendChild(b); }); }
+    function pick(i){ if(sel<0){sel=i;render();return;} if(sel===i){sel=-1;render();return;} const t=items[sel];items[sel]=items[i];items[i]=t;sel=-1;render(); if(items.join("")===goal)setTimeout(()=>done({score:1000}),250); }
+    function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+    render();
+  }},
+  photo:{mount(stage,done){
+    stage.innerHTML='<div class="mini-photo"><input type="file" accept="image/*" class="mini-file"><div class="mini-photo-prev"></div></div><div class="mini-progress">找一個紅色的物品，拍照或選擇圖片上傳。</div>';
+    const inp=stage.querySelector(".mini-file"),prev=stage.querySelector(".mini-photo-prev");
+    inp.addEventListener("change",()=>{ const f=inp.files&&inp.files[0]; if(!f)return; try{ prev.innerHTML='<img src="'+URL.createObjectURL(f)+'" alt="">'; }catch(e){} setTimeout(()=>done({score:1000}),400); });
   }},
   palm:{mount(stage,done){
     let score=0,penalty=0,shown=0; const N=12;
