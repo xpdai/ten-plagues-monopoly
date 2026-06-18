@@ -291,7 +291,7 @@ const TILES=[
   {n:0,name:"起點",sub:"出發",icon:"🏁",cls:"start",
    plan:()=>({kind:"info",text:"旅程從這裡開始——擲骰子出發吧！"})},
   {n:1,name:"火燒荊棘",sub:"上帝顯現",icon:"🔥",
-   plan:(m)=>m==="land"?{kind:"shoes",text:"上帝在荊棘火焰中向摩西顯現，這是聖地。請脫下你的鞋子和襪子，赤腳直到遊戲結束！"}:{kind:"info",text:"上帝在荊棘火焰中向摩西顯現，呼召摩西帶領以色列百姓出埃及。"}},
+   plan:(m)=>m==="land"?{kind:"shoes",text:"上帝在荊棘火焰中向摩西顯現，這是聖地。請脫下你的鞋子和襪子，赤腳直到遊戲結束！"}:{kind:"move",steps:-1,text:"上帝在荊棘火焰中向摩西顯現：「不要近前來，把腳上的鞋脫下，因為你所站之地是聖地。」你還沒脫鞋就踏了上去——後退 1 格。"}},
   {n:2,name:"摩西失守傷害人",icon:"✊",cls:"versus",
    plan:(m,s)=>({kind:"versus",swap:true,text:s==="vs"?"與你指定的玩家猜拳；贏的一方可選擇是否與對方互換格子。":"與關主猜拳，贏了即可過關。"})},
   {n:3,name:"求法老",icon:"🕺",cls:"versus",
