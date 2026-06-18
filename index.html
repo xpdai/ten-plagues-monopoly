@@ -765,7 +765,31 @@ function taskModal(p,tile,plan,opts){
         state.taskPlan=null; return resolve();
       }
       if(kind==="versus"){
-        if(state.submode==="host"){ await button("完成闖關 ✓"); pushLog(`✅ ${p.name} 完成了「${tile.name}」的闖關。`); return done(); }
+        if(state.submode==="host"){
+          // 與電腦關主猜拳：真的出拳、關主隨機應戰，平手重來。
+          const host=state.players.find(x=>x.isHost);
+          const T=[{k:"rock",e:"✊",n:"石頭"},{k:"paper",e:"✋",n:"布"},{k:"scissors",e:"✌️",n:"剪刀"}];
+          const beats={rock:"scissors",paper:"rock",scissors:"paper"};
+          while(true){
+            setText(`${plan.text}\n\n出拳吧——你想出什麼？`);
+            const mk=await choice(T.map(t=>({label:`${t.e} ${t.n}`,val:t.k})));
+            const ho=T[Math.floor(Math.random()*3)], me=T.find(t=>t.k===mk);
+            if(mk===ho.k){ setText(`你出 ${me.e}${me.n}，關主出 ${ho.e}${ho.n} → 平手！再猜一次。`); await button("再猜一次 ✊"); continue; }
+            if(beats[mk]===ho.k){
+              pushLog(`✊ ${p.name} 猜拳贏了關主（${me.e} 對 ${ho.e}）。`);
+              if(plan.swap && host){
+                setText(`你出 ${me.e}${me.n}，關主出 ${ho.e}${ho.n} → 你贏了！🏆\n可選擇是否與關主（第 ${BOARD[host.pos].n} 站）互換格子。`);
+                if(await choice([{label:"與關主互換格子",val:1},{label:"留在原地，過關 →",val:0,cls:"ghost"}])) doSwap(p,host);
+              }else{ setText(`你出 ${me.e}${me.n}，關主出 ${ho.e}${ho.n} → 你贏了！🏆`); await button("過關 →"); }
+            }else{
+              pushLog(`💢 ${p.name} 猜拳輸給了關主（${me.e} 對 ${ho.e}）。`);
+              setText(`你出 ${me.e}${me.n}，關主出 ${ho.e}${ho.n} → 你輸了，下次再加油！`);
+              await button("繼續 →","warn");
+            }
+            break;
+          }
+          return done();
+        }
         while(true){
           setText(plan.text+"\n\n請選擇對戰的玩家：");
           const opp=await pickOpp();
