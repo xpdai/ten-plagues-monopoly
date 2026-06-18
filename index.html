@@ -282,7 +282,9 @@ const AVATARS=[
 // Each tile: plan(mode, sub) -> { kind, text, swap?, steps?, turns? }
 // kind ∈ info|maintain|versus|move|skip|chance|penalty|advance|safe|start|goal
 const TILES=[
-  {n:1,name:"火燒荊棘",sub:"上帝顯現",icon:"🔥",cls:"start",
+  {n:0,name:"起點",sub:"出發",icon:"🏁",cls:"start",
+   plan:()=>({kind:"info",text:"旅程從這裡開始——擲骰子出發吧！"})},
+  {n:1,name:"火燒荊棘",sub:"上帝顯現",icon:"🔥",
    plan:()=>({kind:"start",text:"上帝在荊棘火焰中向摩西顯現，呼召他帶領百姓出埃及。全體玩家請脫下鞋子和襪子，赤腳直到遊戲結束！"})},
   {n:2,name:"摩西失守傷害人",icon:"✊",cls:"versus",
    plan:(m,s)=>({kind:"versus",swap:true,text:s==="vs"?"與你指定的玩家猜拳；贏的一方可選擇是否與對方互換格子。":"與關主猜拳，贏了即可過關。"})},
@@ -436,9 +438,10 @@ async function startGame(players){
   renderBoard(); renderPlayers(); renderLog();
   pushLog(`🎲 出場順序：${players.map(p=>`${p.av.emoji}${p.name}(${p._roll})`).join(" → ")}`);
   updateTurnUI();
-  // Opening: burning bush task for everyone
+  // Opening: the burning-bush calling (脫鞋) for everyone. Players sit on 起點 (0).
   state.busy=true; updateTurnUI();
-  await taskModal(currentPlayer(),BOARD[0],BOARD[0].plan(state.mode,state.submode),{opening:true});
+  const fire=BOARD.find(t=>t.name==="火燒荊棘");
+  await taskModal(currentPlayer(),fire,fire.plan(state.mode,state.submode),{opening:true});
   state.busy=false; updateTurnUI();
 }
 
@@ -495,7 +498,7 @@ function renderPlayers(){
     card.className="player-card"+(i===state.turnIdx?" active":"")+(p.skipTurns>0?" skipping":"");
     card.dataset.pid=p.id; card.setAttribute("role","button"); card.setAttribute("tabindex","0");
     const tile=BOARD[p.pos];
-    const extra=(state.mode==="land"&&state.shoesOff?" · 👣赤腳":"")+(p.maintaining?` · 🧘維持「${escapeHtml(p.maintaining.name)}」`:"");
+    const extra=(state.shoesOff?" · 👣赤腳":"")+(p.maintaining?` · 🧘維持「${escapeHtml(p.maintaining.name)}」`:"");
     card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站 · ⭐ ${p.score}${p.skipTurns>0?` · 💤×${p.skipTurns}`:""}${extra}</div></div>`;
     list.appendChild(card);
   });
@@ -645,7 +648,7 @@ function taskModal(p,tile,plan,opts){
       }
 
       // ----- Card kinds -----
-      if(kind==="start"){ await button(opts.opening?"全體脫鞋，出發！":"繼續"); if(opts.opening&&state.mode==="land"){state.shoesOff=true;renderPlayers();} return done(); }
+      if(kind==="start"){ await button(opts.opening?"全體脫鞋，出發！":"繼續"); if(opts.opening){state.shoesOff=true;renderPlayers();} return done(); }
       if(kind==="maintain"){
         const useTimer=await choice([{label:"⏱ 先計時 20 秒",val:1},{label:"直接開始維持 →",val:0,cls:"good"}]);
         if(useTimer) await countdown(stage,20,"維持動作中…");
