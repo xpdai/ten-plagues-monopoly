@@ -1,2037 +1,707 @@
 <!DOCTYPE html>
 <!--
-  Ten Plagues Monopoly - v1 (hot-seat, 2-4 players, single screen)
-  =================================================================
-  How to run:
-    Option A:  Just double-click this file. It opens in your default browser.
-    Option B:  cd to this folder, run `python3 -m http.server 8000`,
-               then open http://localhost:8000/ in a browser.
+  出埃及大冒險 (Moses' Exodus board game) — skeleton build
+  =======================================================
+  Single self-contained file. No build, no server, no deps. Refresh = new game.
 
-  No build step, no npm, no framework. Pure vanilla HTML/CSS/JS.
-  State lives in window.state. Refresh = new game.
+  Two play modes × two sub-modes:
+    遊戲軟體模式 (web)  /  大地遊戲模式 (physical)
+    × 關主模式 (vs host)  /  玩家對戰模式 (vs another player)
 
-  Plague emoji legend (cartoon-cute placeholders per Designer D-11):
-    1 Blood       🩸    6 Boils       🔴
-    2 Frogs       🐸    7 Hail        🧊
-    3 Lice/Gnats  🦟    8 Locusts     🦗
-    4 Flies       🪰    9 Darkness    🌑
-    5 Livestock   🐄   10 Passover    🌅 (reframed: no death imagery)
-
-  Tile types: 🏜️ Goshen (start), 🌟 Promised Land (goal), 🍞 Manna,
-              🌿 Wilderness Rest, 📜 Pharaoh's Edict, ⬜ Path
+  26 stations follow Moses from the burning bush to the song by the sea.
+  Each tile shows the task for the current mode + sub-mode. In this skeleton the
+  mini-games are presented as task cards with 完成 / 我贏了 / 我輸了 buttons; the
+  board, movement (exact roll to finish, aeroplane-chess rebound), turn order,
+  versus-swap, 機會與命運, skips and scoring are all wired up.
 -->
-<html lang="en">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#f9d6a1" />
+<meta name="theme-color" content="#f4d9a6" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="十災大富翁" />
-<title>Ten Plagues Monopoly</title>
+<meta name="apple-mobile-web-app-title" content="出埃及大冒險" />
+<title>出埃及大冒險</title>
 <style>
-  :root {
-    --sand: #f6e7c1;
-    --sand-2: #ead7a1;
-    --nile: #6ec1e4;
-    --nile-deep: #1a4d6b;
-    --dawn: #ffb56b;
-    --dusk: #6b5b95;
-    --leaf: #7bc47f;
-    --ink: #2a2a3a;
-    --paper: #fffaf0;
-    --shadow: 0 4px 12px rgba(0,0,0,0.12);
-    --radius: 14px;
+  :root{
+    --sand:#f6e7c1; --nile:#6ec1e4; --nile-deep:#1a4d6b; --dawn:#ffb56b;
+    --dusk:#6b5b95; --leaf:#7bc47f; --ink:#2a2a3a; --paper:#fffaf0;
+    --shadow:0 4px 12px rgba(0,0,0,.12); --radius:14px;
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; font-family: "Nunito", "Helvetica Neue", Arial, sans-serif; color: var(--ink); background: linear-gradient(135deg, #fef6e0 0%, #f9d6a1 100%); min-height: 100vh; -webkit-text-size-adjust: 100%; }
-  /* Keep content clear of the notch / Dynamic Island / home indicator (iOS). 0 on desktop. */
-  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
-  h1, h2, h3 { font-family: "Fredoka", "Comic Sans MS", "Nunito", sans-serif; margin: 0; }
-  button { font-family: inherit; font-weight: 700; cursor: pointer; border: none; border-radius: 10px; padding: 10px 18px; background: var(--dawn); color: var(--ink); box-shadow: var(--shadow); transition: transform 0.1s ease, box-shadow 0.1s ease; }
-  button:hover:not(:disabled) { transform: translateY(-1px); }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .hidden { display: none !important; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:"Nunito","Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:linear-gradient(135deg,#fef6e0 0%,#f4d9a6 100%);min-height:100vh;-webkit-text-size-adjust:100%;}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+  h1,h2,h3{font-family:"Fredoka","PingFang TC","Microsoft JhengHei",sans-serif;margin:0;}
+  button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;padding:10px 18px;background:var(--dawn);color:var(--ink);box-shadow:var(--shadow);transition:transform .1s ease;}
+  button:hover:not(:disabled){transform:translateY(-1px);}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .hidden{display:none !important;}
 
-  /* ---------- Setup screen ---------- */
-  #setup { max-width: 640px; margin: 5vh auto; background: var(--paper); padding: 32px; border-radius: var(--radius); box-shadow: var(--shadow); }
-  #setup h1 { font-size: 36px; text-align: center; color: var(--nile-deep); }
-  #setup p.subtitle { text-align: center; color: #6a6a7a; margin: 8px 0 24px; }
-  .player-count-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 24px; }
-  .player-count-row button { background: #fff; border: 2px solid #ddd; min-width: 64px; }
-  .player-count-row button.active { background: var(--nile); color: var(--ink); border-color: var(--nile-deep); }
-  .player-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
-  .player-row { display: flex; gap: 10px; align-items: center; }
-  .player-row input[type="text"] { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 15px; }
-  .color-swatches { display: flex; gap: 6px; }
-  .swatch { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; line-height: 1;
-            box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.25); }
-  .swatch.selected { border-color: var(--ink); transform: scale(1.1); }
-  .swatch.taken { opacity: 0.25; cursor: not-allowed; }
-  .swatch:focus-visible { outline: 3px solid var(--nile); outline-offset: 2px; }
-  #setup .start-btn { width: 100%; font-size: 18px; padding: 14px; background: var(--leaf); color: var(--ink); }
+  /* ---------- Setup ---------- */
+  #setup{max-width:640px;margin:4vh auto;background:var(--paper);padding:28px;border-radius:var(--radius);box-shadow:var(--shadow);}
+  #setup h1{font-size:32px;text-align:center;color:var(--nile-deep);}
+  #setup p.subtitle{text-align:center;color:#6a6a7a;margin:6px 0 20px;}
+  .setup-group{margin-bottom:20px;}
+  .setup-group h3{font-size:16px;margin-bottom:8px;color:var(--nile-deep);}
+  .choice-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .choice-row button{flex:1;min-width:120px;background:#fff;border:2px solid #ddd;text-align:left;padding:12px 14px;}
+  .choice-row button .c-title{font-size:15px;}
+  .choice-row button .c-desc{font-size:12px;font-weight:600;color:#6a6a7a;margin-top:2px;}
+  .choice-row button.active{background:#eaf6ff;border-color:var(--nile);}
+  .count-row{display:flex;gap:10px;justify-content:center;}
+  .count-row button{min-width:60px;background:#fff;border:2px solid #ddd;}
+  .count-row button.active{background:var(--nile);border-color:var(--nile-deep);}
+  .player-rows{display:flex;flex-direction:column;gap:10px;}
+  .player-row{display:flex;gap:10px;align-items:center;}
+  .player-row input[type=text]{flex:1;min-width:0;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;}
+  .swatches{display:flex;gap:6px;flex-wrap:wrap;}
+  .swatch{width:36px;height:36px;border-radius:50%;border:3px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;box-shadow:inset 0 2px 3px rgba(255,255,255,.45),inset 0 -2px 3px rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.25);}
+  .swatch.selected{border-color:var(--ink);transform:scale(1.1);}
+  .swatch.taken{opacity:.25;cursor:not-allowed;}
+  #start-btn{width:100%;font-size:18px;padding:14px;background:var(--leaf);margin-top:6px;}
 
-  /* ---------- In-game layout ---------- */
-  #game { display: none; max-width: 1280px; margin: 0 auto; padding: 16px; }
-  #game.active { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
-  .header-bar { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; background: var(--paper); padding: 10px 18px; border-radius: var(--radius); box-shadow: var(--shadow); }
-  .header-bar h2 { color: var(--nile-deep); }
-  .header-bar button.new-game { background: #fff; border: 2px solid #ddd; }
+  /* ---------- In game ---------- */
+  #game{display:none;max-width:1280px;margin:0 auto;padding:14px;}
+  #game.active{display:grid;grid-template-columns:1fr 340px;gap:14px;}
+  .header-bar{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);padding:10px 16px;border-radius:var(--radius);box-shadow:var(--shadow);}
+  .header-bar h2{color:var(--nile-deep);font-size:20px;}
+  .header-bar .mode-tag{font-size:12px;font-weight:700;color:var(--dusk);background:#f3eeff;padding:4px 10px;border-radius:20px;}
+  .header-bar .new-game{background:#fff;border:2px solid #ddd;}
 
-  /* ---------- Board (winding trail) ---------- */
-  #board-wrap { background: radial-gradient(circle at 30% 20%, #fff7e6 0%, var(--paper) 60%); padding: 12px; border-radius: var(--radius); box-shadow: var(--shadow); overflow: auto; -webkit-overflow-scrolling: touch; }
-  /* Sizer takes the board's *scaled* footprint so #board-wrap can scroll/pan it
-     when the board is bigger than the viewport (phones). Centered when it fits. */
-  #board-fit { position: relative; margin: 0 auto; }
-  #board {
-    position: relative;
-    width: 860px;
-    height: 540px;
-    transform-origin: top left;  /* JS fitBoard() scales this to fit the container */
-    background:
-      radial-gradient(circle at 18% 78%, rgba(123,196,127,0.18) 0 9%, transparent 9%),
-      radial-gradient(circle at 82% 30%, rgba(110,193,228,0.14) 0 11%, transparent 11%);
-  }
-  /* The winding road drawn under the tiles */
-  #board .road { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-  .road-base { fill: none; stroke: #e7cf9a; stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
-  .road-edge { fill: none; stroke: #cbb073; stroke-width: 34; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
-  .road-dash { fill: none; stroke: #fff; stroke-width: 3.5; stroke-dasharray: 1 18; stroke-linecap: round; opacity: 0.75; }
-
-  .tile { position: absolute; width: 70px; height: 62px; transform: translate(-50%, -50%); z-index: 1;
-          background: #fff; border: 2px solid #e5e5e5; border-radius: 12px; padding: 3px;
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
-          font-size: 11px; text-align: center; transition: transform 0.15s ease, box-shadow 0.15s ease;
-          cursor: default; overflow: visible; box-shadow: 0 2px 5px rgba(0,0,0,0.12); }
-  .tile .icon { font-size: 22px; line-height: 1; }
-  .tile .label { font-size: 8.5px; font-weight: 700; line-height: 1.05; margin-top: 1px; max-width: 66px; }
-  .tile .idx { position: absolute; top: 1px; left: 4px; font-size: 8px; color: #555; }
-  .tile.plague { background: #fff3f3; border-color: #f4c2c2; }
-  .tile.plague.spent { background: #f3f3f3; border-color: #ddd; color: #595959; }
-  .tile.plague.spent .icon { opacity: 0.55; }
-  .tile.plague.spent::after { content: "✓"; position: absolute; top: 1px; right: 4px; font-size: 9px; color: #6f8f6f; }
-  .tile.manna { background: #fff7d6; border-color: #ecd97a; }
-  .tile.rest { background: #eaf6ea; border-color: #b4dab4; }
-  .tile.edict { background: #efe8ff; border-color: #c7b8f0; }
-  .tile.miracle { background: linear-gradient(135deg,#e3f3ff,#c7e9ff); border-color: #8fc9ef; }
-  .tile.path { background: #fbfbfb; }
-  .tile.start { background: linear-gradient(135deg, #ffe4b5, #f6c46f); border-color: #d4a447; }
-  .tile.goal { width: 84px; height: 74px; background: linear-gradient(135deg, #fff0c8, #ffd66a); border-color: #d4a447; box-shadow: 0 0 16px rgba(255,200,80,0.7); }
-  .tile.goal .icon { font-size: 28px; }
-  .tile.current { box-shadow: 0 0 0 3px var(--nile), 0 2px 5px rgba(0,0,0,0.12); }
-
-  /* Token row inside tile */
-  .tokens { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; min-height: 18px; }
-  .token { width: 21px; height: 21px; border-radius: 50%; border: 2px solid white;
-           box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.35);
-           display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; }
+  /* ---------- Board ---------- */
+  #board-wrap{background:radial-gradient(circle at 30% 20%,#fff7e6,var(--paper) 60%);padding:10px;border-radius:var(--radius);box-shadow:var(--shadow);overflow:auto;-webkit-overflow-scrolling:touch;}
+  #board-fit{position:relative;margin:0 auto;}
+  #board{position:relative;width:860px;height:540px;transform-origin:top left;
+    background:radial-gradient(circle at 16% 80%,rgba(123,196,127,.16) 0 8%,transparent 8%),radial-gradient(circle at 84% 26%,rgba(110,193,228,.14) 0 10%,transparent 10%);}
+  #board .road{position:absolute;inset:0;z-index:0;pointer-events:none;}
+  .road-edge{fill:none;stroke:#cbb073;stroke-width:34;stroke-linecap:round;stroke-linejoin:round;opacity:.55;}
+  .road-base{fill:none;stroke:#e7cf9a;stroke-width:30;stroke-linecap:round;stroke-linejoin:round;opacity:.9;}
+  .road-dash{fill:none;stroke:#fff;stroke-width:3.5;stroke-dasharray:1 18;stroke-linecap:round;opacity:.75;}
+  .tile{position:absolute;width:74px;height:62px;transform:translate(-50%,-50%);z-index:1;background:#fff;border:2px solid #e5e5e5;border-radius:12px;padding:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;overflow:visible;box-shadow:0 2px 5px rgba(0,0,0,.12);transition:box-shadow .15s;}
+  .tile:hover,.tile:focus-visible{box-shadow:0 0 0 2px var(--nile),0 2px 6px rgba(0,0,0,.18);outline:none;}
+  .tile .icon{font-size:20px;line-height:1;}
+  .tile .label{font-size:8px;font-weight:700;line-height:1.05;margin-top:1px;max-width:70px;}
+  .tile .idx{position:absolute;top:1px;left:4px;font-size:8px;color:#777;}
+  .tile.start{background:linear-gradient(135deg,#ffe4b5,#f6c46f);border-color:#d4a447;}
+  .tile.goal{width:88px;height:74px;background:linear-gradient(135deg,#fff0c8,#ffd66a);border-color:#d4a447;box-shadow:0 0 16px rgba(255,200,80,.7);}
+  .tile.goal .icon{font-size:26px;}
+  .tile.move{background:#ffeef0;border-color:#f4c2c2;}
+  .tile.versus{background:#eef6ff;border-color:#b9dcf5;}
+  .tile.skip{background:#f2f2f2;border-color:#d8d8d8;}
+  .tile.chance{background:linear-gradient(135deg,#e8ffe8,#c7f0c9);border-color:#8fd693;}
+  .tile.current{box-shadow:0 0 0 3px var(--nile),0 2px 5px rgba(0,0,0,.12);}
+  .tokens{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);display:flex;gap:2px;}
+  .token{width:20px;height:20px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;box-shadow:inset 0 2px 3px rgba(255,255,255,.45),inset 0 -2px 3px rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.35);}
 
   /* ---------- Sidebar ---------- */
-  #sidebar { display: flex; flex-direction: column; gap: 12px; }
-  .panel { background: var(--paper); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); }
-  .panel h3 { font-size: 16px; margin-bottom: 10px; color: var(--nile-deep); }
-  .player-card { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; margin-bottom: 6px; border: 2px solid transparent; }
-  .player-card.active { background: #fff8e0; border-color: var(--dawn); }
-  .player-card .swatch-small { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;
-            box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.25); }
-  .player-card .info { flex: 1; }
-  .player-card .name { font-weight: 700; font-size: 14px; }
-  .player-card .stats { font-size: 12px; color: #6a6a7a; }
-  .player-card.skipping .name::after { content: " 💤"; }
+  #sidebar{display:flex;flex-direction:column;gap:12px;}
+  .panel{background:var(--paper);padding:14px;border-radius:var(--radius);box-shadow:var(--shadow);}
+  .panel h3{font-size:16px;margin-bottom:10px;color:var(--nile-deep);}
+  .player-card{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;margin-bottom:6px;border:2px solid transparent;cursor:pointer;}
+  .player-card.active{background:#fff8e0;border-color:var(--dawn);}
+  .player-card.skipping{opacity:.7;}
+  .player-card .av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;box-shadow:inset 0 2px 3px rgba(255,255,255,.45),inset 0 -2px 3px rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.25);}
+  .player-card .name{font-weight:700;font-size:14px;}
+  .player-card .stats{font-size:12px;color:#6a6a7a;}
+  .dice-area{text-align:center;}
+  .dice{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;background:#fff;border:3px solid var(--ink);border-radius:12px;font-size:32px;line-height:1;margin:8px 0;box-shadow:var(--shadow);}
+  .die-face{width:100%;height:100%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:9px;box-sizing:border-box;}
+  .die-face .cell{display:flex;align-items:center;justify-content:center;}
+  .die-face .pip{width:9px;height:9px;border-radius:50%;background:#2a2a3a;box-shadow:inset 0 -1px 1px rgba(0,0,0,.25);}
+  .die-face .pip.red{background:#d12f2f;} .die-face .pip.big{width:14px;height:14px;}
+  .dice.rolling{animation:shake .4s linear;}
+  @keyframes shake{0%,100%{transform:translate(0,0) rotate(0);}25%{transform:translate(-3px,2px) rotate(-6deg);}50%{transform:translate(3px,-2px) rotate(6deg);}75%{transform:translate(-2px,-3px) rotate(-3deg);}}
+  .roll-btn{width:100%;font-size:18px;padding:14px;background:var(--leaf);}
+  #log{max-height:200px;overflow-y:auto;font-size:13px;}
+  #log .entry{padding:5px 7px;border-bottom:1px solid #eee;}
+  #log .entry:last-child{border-bottom:none;}
+  #log .entry.hi{background:#eef6ff;}
 
-  .dice-area { text-align: center; }
-  .dice { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background: white; border: 3px solid var(--ink); border-radius: 12px; font-size: 34px; line-height: 1; margin: 8px 0; box-shadow: var(--shadow); }
-  .die-face { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 9px; box-sizing: border-box; }
-  .die-face .cell { display: flex; align-items: center; justify-content: center; }
-  .die-face .pip { width: 9px; height: 9px; border-radius: 50%; background: #2a2a3a; box-shadow: inset 0 -1px 1px rgba(0,0,0,0.25); }
-  /* Traditional dice: the 1 and 4 faces are red; the single 1-pip is larger. */
-  .die-face .pip.red { background: #d12f2f; }
-  .die-face .pip.big { width: 14px; height: 14px; }
-  .dice.rolling { animation: shake 0.4s linear; }
-  @keyframes shake { 0%,100% { transform: translate(0,0) rotate(0); } 25% { transform: translate(-3px, 2px) rotate(-6deg); } 50% { transform: translate(3px,-2px) rotate(6deg); } 75% { transform: translate(-2px,-3px) rotate(-3deg); } }
-  .roll-btn { width: 100%; font-size: 18px; padding: 12px; background: var(--leaf); color: var(--ink); }
+  /* ---------- Modals ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:100;}
+  .modal{background:var(--paper);padding:24px 26px;border-radius:var(--radius);max-width:440px;width:calc(100vw - 36px);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .modal .big-icon{font-size:58px;line-height:1;margin:2px 0;}
+  .modal h2{font-size:22px;color:var(--nile-deep);margin-bottom:4px;}
+  .modal .sub{font-size:12px;font-weight:700;color:var(--dusk);margin-bottom:10px;}
+  .modal .text{font-size:14.5px;line-height:1.6;color:#3a3a4a;text-align:left;margin-bottom:16px;}
+  .modal .controls{display:flex;flex-direction:column;gap:8px;}
+  .modal .controls button{width:100%;font-size:15px;padding:12px 16px;}
+  .modal .controls .ghost{background:#fff;border:2px solid #ddd;}
+  .modal .controls .good{background:var(--leaf);}
+  .modal .controls .warn{background:#f3a9a9;}
+  .modal .opp-list{display:flex;flex-direction:column;gap:6px;}
+  .modal .opp-list button{display:flex;justify-content:space-between;align-items:center;background:#fff;border:2px solid #ddd;}
 
-  #log { max-height: 240px; overflow-y: auto; font-size: 13px; }
-  #log .entry { padding: 6px 8px; border-bottom: 1px solid #eee; }
-  #log .entry:last-child { border-bottom: none; }
-  #log .entry.plague { background: #fff3f3; }
+  /* ---------- Win ---------- */
+  #win-screen{position:fixed;inset:0;background:linear-gradient(135deg,#fef6e0,#ffd66a);display:flex;align-items:center;justify-content:center;z-index:200;}
+  #win-screen .inner{text-align:center;max-width:520px;background:var(--paper);padding:36px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  #win-screen h1{font-size:34px;color:var(--nile-deep);margin-bottom:10px;}
+  #win-screen .winner-name{font-size:26px;font-weight:700;color:var(--dawn);margin:8px 0 20px;}
+  #win-screen .standings .row{padding:8px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;}
+  #win-screen button{width:100%;font-size:18px;padding:14px;background:var(--leaf);margin-top:16px;}
 
-  /* ---------- Modal ---------- */
-  #modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  #modal { background: var(--paper); padding: 28px 32px; border-radius: var(--radius); max-width: 460px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-  #modal .big-icon { font-size: 80px; line-height: 1; margin: 8px 0; }
-  #modal h2 { font-size: 26px; margin-bottom: 8px; color: var(--nile-deep); }
-  #modal p.flavor { font-size: 15px; line-height: 1.5; color: #4a4a5a; margin: 8px 0 4px; }
-  #modal p.effect { font-size: 14px; font-weight: 700; color: var(--dusk); margin: 8px 0 16px; background: #f3eeff; padding: 10px; border-radius: 8px; }
-  #modal-choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  #modal-choices:empty { display: none; }
-  #modal-choices button { width: 100%; font-size: 15px; padding: 11px 16px; }
-  #modal-choices .choice-staff { background: linear-gradient(135deg,#bfe6ff,#7cc7f0); color: var(--ink); }
-  #modal-choices .choice-charm { background: linear-gradient(135deg,#ffe1f0,#f3a9cf); color: var(--ink); }
-  #modal-choices .choice-faith { background: var(--leaf); color: var(--ink); }
-  #modal button#modal-continue { background: var(--nile); color: var(--ink); font-size: 16px; padding: 12px 28px; }
-
-  /* Rules panel + staff badge */
-  #rules-panel .rules { margin: 0; padding-left: 2px; list-style: none; font-size: 12.5px; line-height: 1.5; color: #4a4a5a; }
-  #rules-panel .rules li { margin-bottom: 5px; }
-  .player-card .badge { font-size: 12px; }
-
-  /* Inventory chips inside player cards */
-  .player-card .inv { display: inline-flex; gap: 4px; margin-left: 2px; }
-  .player-card .inv .item-chip { font-size: 13px; }
-  .player-card { cursor: pointer; }
-  .player-card:focus-visible { outline: 3px solid var(--nile); outline-offset: 2px; }
-
-  /* Tiles are inspectable */
-  .tile { cursor: pointer; }
-  .tile:hover { box-shadow: 0 0 0 2px var(--nile), 0 2px 6px rgba(0,0,0,0.18); }
-  .tile.current:hover { box-shadow: 0 0 0 3px var(--nile), 0 2px 6px rgba(0,0,0,0.18); }
-  .tile:focus-visible { outline: 3px solid var(--nile-deep); outline-offset: 1px; z-index: 2; }
-
-  /* ---------- Info / inspect modal ---------- */
-  #info-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 150; }
-  #info-modal { background: var(--paper); padding: 24px 28px; border-radius: var(--radius); max-width: 420px; width: calc(100% - 40px); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-  #info-modal .big-icon { font-size: 60px; line-height: 1; margin: 4px 0; }
-  #info-modal h2 { font-size: 22px; margin-bottom: 10px; color: var(--nile-deep); }
-  #info-body { font-size: 14px; line-height: 1.55; color: #4a4a5a; text-align: left; margin-bottom: 18px; }
-  #info-body .row { padding: 4px 0; }
-  #info-body .effect { font-weight: 700; color: var(--dusk); background: #f3eeff; padding: 8px 10px; border-radius: 8px; margin: 8px 0; }
-  #info-body .spent { color: #6f8f6f; font-weight: 700; }
-  #info-body .section-title { font-weight: 700; color: var(--nile-deep); margin: 10px 0 4px; }
-  #info-body .defence-list { list-style: none; padding-left: 0; margin: 0; }
-  #info-body .defence-list li { padding: 2px 0; }
-  #info-body .item-line { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
-  #info-body .item-line .ic { font-size: 18px; }
-  #info-modal button#info-close { background: var(--nile); color: var(--ink); font-size: 15px; padding: 10px 24px; }
-
-  /* ---------- Roll-off (turn order ceremony) ---------- */
-  #rolloff-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 160; }
-  #rolloff { background: var(--paper); padding: 24px 26px; border-radius: var(--radius); max-width: 420px; width: calc(100% - 36px); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-  #rolloff h2 { font-size: 22px; color: var(--nile-deep); margin-bottom: 14px; }
-  #rolloff-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .ro-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; border: 2px solid transparent; background: #fff; transition: background 0.15s, border-color 0.15s, transform 0.15s; }
-  .ro-row.active { background: #fff8e0; }
-  .ro-row.current { border-color: var(--dawn); transform: scale(1.02); }
-  .ro-rank { font-weight: 800; color: var(--nile-deep); width: 20px; text-align: center; }
-  .ro-av { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 17px; line-height: 1;
-           box-shadow: inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.25); }
-  .ro-name { flex: 1; text-align: left; font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ro-die { width: 40px; height: 40px; flex-shrink: 0; background: #fff; border: 2px solid var(--ink); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
-  .ro-die .die-face { padding: 6px; }
-  .ro-die .pip { width: 7px; height: 7px; }
-  .ro-dash { color: #bbb; font-weight: 700; }
-  #rolloff-status { min-height: 18px; font-weight: 700; color: var(--dusk); margin: 2px 0; }
-  #rolloff-prompt { min-height: 18px; color: #4a4a5a; font-size: 14px; margin: 0 0 14px; }
-  #rolloff-roll { background: var(--leaf); color: var(--ink); font-size: 17px; padding: 13px 30px; }
-  #rolloff-start { background: var(--dawn); color: var(--ink); font-size: 17px; padding: 13px 30px; }
-
-  /* ---------- Win screen ---------- */
-  #win-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #fef6e0, #ffd66a); display: flex; align-items: center; justify-content: center; z-index: 200; }
-  #win-screen .inner { text-align: center; max-width: 520px; background: var(--paper); padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
-  #win-screen h1 { font-size: 40px; color: var(--nile-deep); margin-bottom: 12px; }
-  #win-screen .winner-name { font-size: 28px; font-weight: 700; color: var(--dawn); margin: 8px 0 24px; }
-  #win-screen .standings { text-align: left; margin: 16px 0; }
-  #win-screen .standings .row { padding: 8px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
-  #win-screen button { width: 100%; font-size: 18px; padding: 14px; background: var(--leaf); color: var(--ink); margin-top: 16px; }
-
-  /* Language switcher */
-  .lang-switch { display: inline-flex; gap: 4px; background: #fff; border: 2px solid #ddd; border-radius: 10px; padding: 4px; }
-  .lang-switch button { background: transparent; box-shadow: none; padding: 4px 10px; font-size: 13px; border-radius: 6px; color: var(--ink); }
-  .lang-switch button.active { background: var(--nile); color: var(--ink); }
-  .lang-switch button:focus-visible { outline: 3px solid var(--nile); outline-offset: 2px; }
-  #setup .lang-switch-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
-  .header-bar .header-right { display: flex; gap: 10px; align-items: center; }
-
-  /* ---------- Responsive: narrow / tablet ---------- */
-  @media (max-width: 760px) {
-    #setup { padding: 18px; margin: 2vh auto; }
-    #setup h1 { font-size: 28px; }
-    .player-row { flex-wrap: wrap; }
-    .player-row input[type="text"] { min-width: 0; }
-    .color-swatches { flex-wrap: wrap; }
-    #game { padding: 8px; }
-    /* Stack board over sidebar so the fixed 340px column can't force overflow.
-       The board itself keeps its scale and scrolls inside #board-wrap. */
-    #game.active { grid-template-columns: minmax(0, 1fr); }
-    .header-bar { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
-    .header-bar h2 { font-size: 20px; }
-    #sidebar { gap: 10px; }
+  @media (max-width:760px){
+    #setup{padding:18px;margin:2vh auto;}
+    #game{padding:8px;}
+    #game.active{grid-template-columns:minmax(0,1fr);}
+    .header-bar h2{font-size:18px;}
   }
-
-  /* ---------- Phones (iPhone 13 mini 375pt, 15 Pro 393pt, etc.) ---------- */
-  @media (max-width: 480px) {
-    #game { padding: 6px; gap: 10px; }
-    #board-wrap { padding: 6px; }
-    /* Board scales to fit the width (fitBoard) — at phone widths the text
-       labels become unreadable, so show clean icon tiles and tap for detail. */
-    .tile .label, .tile .idx { display: none; }
-    .tile { border-radius: 9px; }
-    .tile:active { box-shadow: 0 0 0 2px var(--nile), 0 2px 6px rgba(0,0,0,0.18); }
-    .panel { padding: 12px; }
-    .panel h3 { font-size: 15px; }
-    /* Big thumb-friendly roll button */
-    .roll-btn { padding: 16px; font-size: 19px; }
-    .dice { width: 72px; height: 72px; }
-    .player-card { padding: 10px; }
-    .player-card .name { font-size: 15px; }
-    .player-card .stats { font-size: 12.5px; }
-    .header-bar h2 { font-size: 18px; }
-    .lang-switch button { padding: 6px 10px; font-size: 13px; }
-    .new-game { padding: 8px 12px; }
-    /* Modals: full-width sheets with comfortable tap targets */
-    #modal, #info-modal { width: calc(100vw - 28px); max-width: 420px; padding: 22px 20px; }
-    #modal-choices button, #modal button#modal-continue, #info-modal button#info-close { padding: 14px 16px; font-size: 16px; }
-    #setup { margin: 0 auto; border-radius: 0; min-height: 100vh; }
-    #setup h1 { font-size: 26px; }
-    #setup .start-btn { padding: 16px; font-size: 18px; }
+  @media (max-width:480px){
+    #board-wrap{padding:6px;}
+    .tile .label,.tile .idx{display:none;}
+    .roll-btn{padding:16px;font-size:19px;}
   }
-
-  /* Accessibility: respect reduced motion */
-  @media (prefers-reduced-motion: reduce) {
-    * { animation: none !important; transition: none !important; }
-  }
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
 </head>
 <body>
 
-<!-- =================== SETUP SCREEN =================== -->
+<!-- ============ SETUP ============ -->
 <section id="setup">
-  <div class="lang-switch-row">
-    <div class="lang-switch" id="lang-switch-setup" role="group" aria-label="Language">
-      <button data-lang="en" type="button">English</button>
-      <button data-lang="zh-TW" type="button">中文</button>
-    </div>
-  </div>
-  <h1 id="setup-title">🏜️ Ten Plagues Monopoly</h1>
-  <p class="subtitle" id="setup-subtitle">A cozy hot-seat race from Goshen to the Promised Land.</p>
+  <h1>🏜️ 出埃及大冒險</h1>
+  <p class="subtitle">跟著摩西，從荊棘火焰一路走到紅海對岸，向耶和華歌唱。</p>
 
-  <div>
-    <h3 style="margin-bottom:10px" id="setup-how-many">How many players?</h3>
-    <div class="player-count-row" id="player-count-row">
-      <button data-n="2">2</button>
-      <button data-n="3">3</button>
-      <button data-n="4">4</button>
+  <div class="setup-group">
+    <h3>遊玩模式</h3>
+    <div class="choice-row" id="mode-row">
+      <button data-mode="soft"><div class="c-title">🕹️ 遊戲軟體模式</div><div class="c-desc">在螢幕上玩迷你遊戲</div></button>
+      <button data-mode="land"><div class="c-title">🌳 大地遊戲模式</div><div class="c-desc">實體場地、做動作闖關</div></button>
     </div>
   </div>
 
-  <div class="player-rows" id="player-rows"><!-- generated by JS --></div>
+  <div class="setup-group">
+    <h3>進行方式</h3>
+    <div class="choice-row" id="submode-row">
+      <button data-sub="host"><div class="c-title">🧑‍🏫 關主模式</div><div class="c-desc">與關主（電腦）比賽闖關</div></button>
+      <button data-sub="vs"><div class="c-title">⚔️ 玩家對戰模式</div><div class="c-desc">指定同場玩家對戰、可換格</div></button>
+    </div>
+  </div>
 
-  <button class="start-btn" id="start-btn">Start Game</button>
+  <div class="setup-group">
+    <h3>幾位玩家？</h3>
+    <div class="count-row" id="count-row">
+      <button data-n="2">2</button><button data-n="3">3</button><button data-n="4">4</button>
+    </div>
+  </div>
+
+  <div class="setup-group">
+    <div class="player-rows" id="player-rows"></div>
+  </div>
+
+  <button id="start-btn">開始遊戲</button>
 </section>
 
-<!-- =================== IN-GAME =================== -->
+<!-- ============ GAME ============ -->
 <section id="game">
   <div class="header-bar">
-    <h2 id="game-title">🏜️ Ten Plagues Monopoly</h2>
-    <div class="header-right">
-      <div class="lang-switch" id="lang-switch-game" role="group" aria-label="Language">
-        <button data-lang="en" type="button">EN</button>
-        <button data-lang="zh-TW" type="button">中文</button>
-      </div>
-      <button class="new-game" id="new-game-btn">New Game</button>
-    </div>
+    <h2>🏜️ 出埃及大冒險</h2>
+    <span class="mode-tag" id="mode-tag">—</span>
+    <button class="new-game" id="new-game-btn">重新開始</button>
   </div>
-
-  <div id="board-wrap">
-    <div id="board-fit">
-      <div id="board" aria-label="Game board"></div>
-    </div>
-  </div>
-
+  <div id="board-wrap"><div id="board-fit"><div id="board" aria-label="遊戲地圖"></div></div></div>
   <div id="sidebar">
-    <div class="panel" id="players-panel">
-      <h3 id="players-panel-title">Players</h3>
-      <div id="players-list"></div>
-    </div>
-
-    <div class="panel dice-area">
-      <h3 id="current-turn-name">—</h3>
-      <div class="dice" id="dice">🎲</div>
-      <button class="roll-btn" id="roll-btn">Roll Dice</button>
-    </div>
-
-    <div class="panel" id="rules-panel">
-      <h3 id="rules-panel-title">How to Survive</h3>
-      <ul class="rules">
-        <li id="rules-line-1">Race from Goshen to the Promised Land.</li>
-        <li id="rules-line-2">Faith is your shield — spend it to dodge setbacks.</li>
-        <li id="rules-line-3">Grab the Staff of Moses to cancel any one plague.</li>
-        <li id="rules-line-4">Manna +1 Faith · Tabernacle heals a skip · Edict taxes Faith.</li>
-        <li id="rules-line-5">Each plague strikes only the first to reach it.</li>
-      </ul>
-    </div>
-
-    <div class="panel">
-      <h3 id="log-panel-title">Event Log</h3>
-      <div id="log" aria-live="polite"></div>
-    </div>
+    <div class="panel"><h3>玩家</h3><div id="players-list"></div></div>
+    <div class="panel dice-area"><h3 id="turn-name">—</h3><div class="dice" id="dice">🎲</div><button class="roll-btn" id="roll-btn">擲骰子</button></div>
+    <div class="panel"><h3>事件紀錄</h3><div id="log" aria-live="polite"></div></div>
   </div>
 </section>
 
-<!-- =================== MODAL =================== -->
-<div id="modal-backdrop" class="hidden" role="dialog" aria-modal="true">
-  <div id="modal">
-    <div class="big-icon" id="modal-icon">?</div>
-    <h2 id="modal-title">Title</h2>
-    <p class="flavor" id="modal-flavor">Flavor</p>
-    <p class="effect" id="modal-effect">Effect</p>
-    <div id="modal-choices"></div>
-    <button id="modal-continue">Continue</button>
+<!-- ============ TASK MODAL ============ -->
+<div id="task-backdrop" class="backdrop hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="big-icon" id="task-icon">?</div>
+    <h2 id="task-title">任務</h2>
+    <div class="sub" id="task-sub"></div>
+    <div class="text" id="task-text"></div>
+    <div class="controls" id="task-controls"></div>
   </div>
 </div>
 
-<!-- =================== INFO / INSPECT MODAL =================== -->
-<div id="info-backdrop" class="hidden" role="dialog" aria-modal="true" aria-labelledby="info-title">
-  <div id="info-modal">
+<!-- ============ INFO (inspect) ============ -->
+<div id="info-backdrop" class="backdrop hidden" role="dialog" aria-modal="true">
+  <div class="modal">
     <div class="big-icon" id="info-icon">?</div>
-    <h2 id="info-title">Title</h2>
-    <div id="info-body"></div>
-    <button id="info-close">Close</button>
+    <h2 id="info-title"></h2>
+    <div class="sub" id="info-sub"></div>
+    <div class="text" id="info-text"></div>
+    <div class="controls"><button id="info-close" class="good">關閉</button></div>
   </div>
 </div>
 
-<!-- =================== ROLL-OFF (turn order) =================== -->
-<div id="rolloff-backdrop" class="hidden" role="dialog" aria-modal="true" aria-labelledby="rolloff-title">
-  <div id="rolloff">
-    <h2 id="rolloff-title">Roll for turn order</h2>
-    <div id="rolloff-list"></div>
-    <p id="rolloff-status"></p>
-    <p id="rolloff-prompt"></p>
-    <button id="rolloff-roll">🎲 Roll</button>
-    <button id="rolloff-start" class="hidden">Start Game</button>
-  </div>
-</div>
-
-<!-- =================== WIN =================== -->
-<div id="win-screen" class="hidden">
-  <div class="inner">
-    <h1 id="win-title">🌅 The Promised Land!</h1>
-    <p id="win-subtitle">...has been reached by...</p>
-    <div class="winner-name" id="winner-name">—</div>
-    <div class="standings" id="standings"></div>
-    <button id="play-again-btn">Play Again</button>
-  </div>
-</div>
+<!-- ============ WIN ============ -->
+<div id="win-screen" class="hidden"><div class="inner">
+  <h1>🌟 抵達應許之地！</h1>
+  <div class="winner-name" id="winner-name">—</div>
+  <div class="standings" id="standings"></div>
+  <button id="play-again-btn">再玩一局</button>
+</div></div>
 
 <script>
 // ============================================================
-// Ten Plagues Monopoly — game logic
+// Data
 // ============================================================
-
-// --------- Board layout (30 tiles, FR-1) ---------
-// Plagues distributed in canonical Exodus order.
-// Counts: 10 plagues, 4 manna, 4 rest, 4 edict, 6 path, +Goshen +Promised = 30.
-// Each player is a desert-journey avatar on a coloured game piece. The emoji
-// double-codes identity independently of hue (colour-blind safety, FP-07).
-const PRESET_COLORS = [
-  { id: "coral",   hex: "#e76f51", shape: "🐫", letter: "A" },
-  { id: "teal",    hex: "#2a9d8f", shape: "🐑", letter: "B" },
-  { id: "saffron", hex: "#e9c46a", shape: "🦅", letter: "C" },
-  { id: "plum",    hex: "#c3a0f0", shape: "🌵", letter: "D" },
+const AVATARS=[
+  {id:"camel",hex:"#e76f51",emoji:"🐫",name:"駱駝"},
+  {id:"sheep",hex:"#2a9d8f",emoji:"🐑",name:"綿羊"},
+  {id:"eagle",hex:"#e9c46a",emoji:"🦅",name:"老鷹"},
+  {id:"cactus",hex:"#c3a0f0",emoji:"🌵",name:"仙人掌"},
 ];
 
-// PLAGUE_DEFS holds language-neutral data; title/flavor/effect come from i18n.
-// harmful: offers defence options (Staff / Faith) in the modal.
-// mitigate: { cost, labelKey } — spend Faith to fully shrug off the setback.
-const PLAGUE_DEFS = {
-  blood:     { id: "blood",     n: 1,  icon: "🩸", harmful: true,  faithLoss: true },
-  frogs:     { id: "frogs",     n: 2,  icon: "🐸", harmful: true,  mitigate: { cost: 1, labelKey: "mitigate_frogs" } },
-  lice:      { id: "lice",      n: 3,  icon: "🦟", harmful: true,  mitigate: { cost: 1, labelKey: "mitigate_lice" } },
-  flies:     { id: "flies",     n: 4,  icon: "🪰", harmful: false },
-  livestock: { id: "livestock", n: 5,  icon: "🐄", harmful: true,  faithLoss: true },
-  boils:     { id: "boils",     n: 6,  icon: "🔴", harmful: true,  mitigate: { cost: 2, labelKey: "mitigate_boils" } },
-  hail:      { id: "hail",      n: 7,  icon: "🧊", harmful: true,  mitigate: { cost: 1, labelKey: "mitigate_hail" } },
-  locusts:   { id: "locusts",   n: 8,  icon: "🦗", harmful: true,  faithLoss: true },
-  darkness:  { id: "darkness",  n: 9,  icon: "🌑", harmful: true,  mitigate: { cost: 2, labelKey: "mitigate_darkness" } },
-  passover:  { id: "passover",  n: 10, icon: "🌅", harmful: false },
-};
+// Each tile: plan(mode, sub) -> { kind, text, swap?, steps?, turns? }
+// kind ∈ info|maintain|versus|move|skip|chance|penalty|advance|safe|start|goal
+const TILES=[
+  {n:1,name:"火燒荊棘",sub:"上帝顯現",icon:"🔥",cls:"start",
+   plan:()=>({kind:"start",text:"上帝在荊棘火焰中向摩西顯現，呼召他帶領百姓出埃及。全體玩家請脫下鞋子和襪子，赤腳直到遊戲結束！"})},
+  {n:2,name:"摩西失守傷害人",icon:"✊",cls:"versus",
+   plan:(m,s)=>({kind:"versus",swap:true,text:s==="vs"?"與你指定的玩家猜拳；贏的一方可選擇是否與對方互換格子。":"與關主猜拳，贏了即可過關。"})},
+  {n:3,name:"求法老",icon:"🕺",cls:"versus",
+   plan:(m,s)=>({kind:"versus",swap:true,text:m==="land"?"在大家面前表演一小段舞蹈。"+(s==="vs"?"與對手比舞，勝者可選擇是否互換格子。":""):"跳舞機：依螢幕出現的方向按對應方向鍵，最快且正確率高者獲勝。"+(s==="vs"?"勝者可選擇是否互換格子。":"")})},
+  {n:4,name:"被法老拒絕",icon:"🚫",cls:"move",
+   plan:()=>({kind:"move",steps:-2,text:"法老拒絕了摩西的請求。後退 2 格。"})},
+  {n:5,name:"轉告以色列人",icon:"📣",cls:"versus",
+   plan:(m,s)=>({kind:"versus",swap:true,text:m==="land"?"與對手比大聲，一起喊出「我們一起走！」最大聲者獲勝。"+(s==="vs"?"勝者可選擇是否互換格子。":""):"打字對戰：螢幕顯示一句話，最快正確輸入完成者獲勝。"+(s==="vs"?"勝者可選擇是否互換格子。":"")})},
+  {n:6,name:"再去找法老",icon:"🕺",cls:"versus",
+   plan:(m,s)=>({kind:"versus",swap:true,text:m==="land"?"再表演一小段舞蹈。"+(s==="vs"?"與對手比舞，勝者可選擇是否互換格子。":""):"跳舞機：依方向按鍵，最快且正確率高者獲勝。"+(s==="vs"?"勝者可選擇是否互換格子。":"")})},
+  {n:7,name:"杖變蛇",icon:"🐍",
+   plan:(m)=>({kind:"maintain",text:m==="land"?"杖變成了蛇！像蛇一樣在地上蠕動，維持到下一輪任務開始前。":"描線：螢幕出現直線或曲線，用滑鼠精準沿線移動，不可超出線外。"})},
+  {n:8,name:"河水變血",icon:"🩸",cls:"versus",
+   plan:(m,s)=>({kind:"versus",swap:true,text:m==="land"?"與對手比賽找出紅色的東西，最快者勝。"+(s==="vs"?"勝者可選擇是否互換格子。":""):"找出紅色物品並拍照上傳。"+(s==="vs"?"與對手比快，最快者勝，勝者可選擇是否互換格子。":"上傳成功即可過關。")})},
+  {n:9,name:"法老心剛硬",icon:"🗿",cls:"skip",
+   plan:()=>({kind:"skip",turns:1,text:"法老的心剛硬。暫停一輪。"})},
+  {n:10,name:"蛙災",icon:"🐸",cls:"versus",
+   plan:(m,s)=>({kind:"versus",swap:true,text:m==="land"?"青蛙跳！比賽跳到關主指定的地方，最快抵達者勝。"+(s==="vs"?"勝者可選擇是否互換格子。":""):"點青蛙：螢幕出現很多青蛙，用滑鼠點掉。"+(s==="vs"?"最快消除者勝，勝者可選擇是否互換格子。":"消完即可過關。")})},
+  {n:11,name:"跳蚤災",icon:"🦟",
+   plan:(m,s)=>m==="land"?{kind:"maintain",text:"跳蚤上身！做出快速小碎步的動作，維持到下一輪任務開始前。"}:{kind:"versus",swap:true,text:"在螢幕空白處點 30 下。"+(s==="vs"?"與對手比快，最快者勝，勝者可選擇是否互換格子。":"點完即可過關。")}},
+  {n:12,name:"蒼蠅災",icon:"🪰",
+   plan:(m,s)=>m==="soft"?{kind:"versus",swap:true,text:"螢幕出現數隻蒼蠅以不同速度飛過，點按擊殺。"+(s==="vs"?"最快擊殺者勝，勝者可選擇是否互換格子。":"擊殺即可過關。")}:(s==="host"?{kind:"maintain",text:"你就是蒼蠅！在範圍內四處移動，別被關主抓到。"}:{kind:"skip",turns:1,text:"蒼蠅太多，大家都關起家門不敢出門。暫停一輪。"})},
+  {n:13,name:"瘟疫",icon:"🐄",
+   plan:(m,s)=>(m==="soft"&&s==="host")?{kind:"safe",text:"瘟疫蔓延，但這一關你平安通過。"}:{kind:"skip",turns:1,text:"瘟疫蔓延，牲畜倒下。暫停一輪。"}},
+  {n:14,name:"起泡的瘡",icon:"🔴",
+   plan:(m,s)=>m==="land"?{kind:"maintain",text:"長出起泡的瘡，又癢又痛！做出抓癢的動作，維持到下一輪任務開始前。"}:{kind:"versus",swap:true,text:"擦疹子：用滑鼠來回擦拭，把疹子消乾淨。"+(s==="vs"?"與對手比快，最快者勝，勝者可選擇是否互換格子。":"消乾淨即可過關。")}},
+  {n:15,name:"冰雹與火",icon:"🧊",
+   plan:(m,s)=>m==="land"?{kind:"info",text:"天降冰雹與火！會被關主用水球或紙團丟（此關不對戰）。"}:{kind:"versus",swap:true,text:"操控螢幕底端的小人，閃避從天而降的冰雹與火。"+(s==="vs"?"被砸到次數最少者勝，勝者可選擇是否互換格子。":"撐過去即可過關。")}},
+  {n:16,name:"蝗災",icon:"🦗",
+   plan:(m)=>m==="land"?{kind:"info",text:"蝗蟲鋪天蓋地！匍匐前進到關主指定的位置（此關不對戰）。"}:{kind:"advance",text:"蝗蟲過境。你可以選擇是否前進到下一格，並進行下一格的任務。"}},
+  {n:17,name:"羔羊血塗門楣",icon:"🚪",
+   plan:(m)=>({kind:"info",text:m==="land"?"關主在每位玩家臉上畫上記號（此關不對戰）。":"拿起紅色油漆刷（滑鼠），把雙開門的門楣與門框塗上記號（此關不對戰）。"})},
+  {n:18,name:"長子之死",icon:"🌑",
+   plan:(m)=>m==="land"?{kind:"maintain",text:"長子之死的夜晚。躺在地板上，維持到下一輪任務開始前（此關不對戰）。"}:{kind:"skip",turns:1,text:"長子之死的夜晚。暫停一輪。"}},
+  {n:19,name:"法老放行",sub:"機會與命運",icon:"🎴",cls:"chance",
+   plan:()=>({kind:"chance",text:"法老終於放行！抽一張「機會與命運」卡，決定你的去向。"})},
+  {n:20,name:"雲柱火柱隨行",icon:"☁️",
+   plan:(m)=>({kind:"info",text:m==="land"?"兩人三腳走到關主指定地點（此關不對戰）；落單的玩家則向左轉 5 圈、向右轉 5 圈，再跑直線到目的地。":"把散落一地的雲柱、火柱與人們排成「雲－人－火」的順序即可過關（此關不對戰）。"})},
+  {n:21,name:"追兵",icon:"🏇",cls:"move",
+   plan:(m)=>({kind:"penalty",text:m==="land"?"法老的追兵來了！限時 15 秒鬼抓人，被抓到的玩家扣 1 分。":"法老的追兵來了！電腦隨機抽中一名玩家扣 1 分。"})},
+  {n:22,name:"紅海分開",icon:"🌊",
+   plan:(m)=>m==="land"?{kind:"maintain",text:"紅海分開！做出劈腿的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"info",text:"紅海分開！沿著乾路把人們一個個帶到路尾，途中不可碰到海水（碰到一次扣 1 分，此關不對戰）。"}},
+  {n:23,name:"紅海合起來",icon:"🌊",
+   plan:(m)=>m==="land"?{kind:"maintain",text:"紅海合起來！做出坐姿體前彎的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"safe",text:"海水合起來滅了追兵，這一輪你平安度過。"}},
+  {n:24,name:"埃及軍隊被淹沒",icon:"💧",
+   plan:(m)=>m==="land"?{kind:"info",text:"埃及軍隊被海水淹沒！喝五口水（此關不對戰）。"}:{kind:"safe",text:"海水滅了追兵，這一輪你平安度過。"}},
+  {n:25,name:"以色列人勝",icon:"🎉",
+   plan:(m,s)=>m==="land"?(s==="host"?{kind:"info",text:"以色列人得勝！關主把手舉高，玩家跳起來拍關主的手。"}:{kind:"info",text:"以色列人得勝！做開合跳 15 下（此關不對戰）。"}):{kind:"info",text:"螢幕不定時出現「攤開的掌心」或「緊握的拳頭」：點掌心、但拳頭不可點，誤點一次扣 1 分（此關不對戰）。"}},
+  {n:26,name:"向耶和華歌唱",sub:"終點",icon:"🌟",cls:"goal",
+   plan:(m)=>({kind:"goal",text:m==="land"?"抵達終點！盡情喊叫、放聲歡呼！":"抵達終點！播放歡呼的音效，向耶和華歌唱！"})},
+];
+const GOAL_IDX=TILES.length-1; // 25
+const BOARD=TILES;
 
-// --------- Items / inventory ---------
-// Players collect items along the way. Each is held at most once.
-//  staff — cancels ANY one plague.   charm — wards off a faith-draining plague.
-const ITEMS = {
-  staff: { id: "staff", icon: "🪄", nameKey: "item_staff_name", descKey: "item_staff_desc" },
-  charm: { id: "charm", icon: "🧿", nameKey: "item_charm_name", descKey: "item_charm_desc" },
-};
-function hasItem(p, id) { return !!(p && p.items && p.items.includes(id)); }
-function addItem(p, id) { if (p && p.items && !p.items.includes(id)) p.items.push(id); }
-function removeItem(p, id) { if (p && p.items) p.items = p.items.filter(x => x !== id); }
+// Winding path coordinates for 26 tiles (serpentine, bottom → top).
+const POS=(function(){
+  const n=BOARD.length, cols=7, mX=70, mY=80, W=860, H=540;
+  const uW=W-2*mX, uH=H-2*mY, rows=Math.ceil(n/cols), pts=[];
+  for(let i=0;i<n;i++){
+    const row=Math.floor(i/cols); let col=i%cols;
+    if(row%2===1) col=cols-1-col;
+    const x=mX+(cols>1?uW*col/(cols-1):uW/2);
+    const y=H-mY-(rows>1?uH*row/(rows-1):0);
+    pts.push([Math.round(x),Math.round(y+((i%2)?-10:10))]);
+  }
+  return pts;
+})();
+
+const MODE_LABEL={soft:"遊戲軟體模式",land:"大地遊戲模式"};
+const SUB_LABEL={host:"關主模式",vs:"玩家對戰模式"};
 
 // ============================================================
-// i18n — minimal inline dictionary + lookup helper.
-// (Single-file static app: no build, no JSON loader; inline is the smallest viable approach.)
+// State
 // ============================================================
-const I18N = {
-  en: {
-    page_title: "Ten Plagues Monopoly",
-    app_title: "🏜️ Ten Plagues Monopoly",
-    setup_subtitle: "A cozy hot-seat race from Goshen to the Promised Land.",
-    setup_how_many: "How many players?",
-    setup_player_placeholder: "Player {n} name",
-    setup_default_name: "Player {n}",
-    setup_start_btn: "Start Game",
-    alert_need_color: "Each player needs a color.",
-    alert_duplicate_color: "Two players picked the same color.",
-    header_new_game: "New Game",
-    confirm_new_game: "Discard current match and return to setup?",
-    sidebar_players: "Players",
-    sidebar_event_log: "Event Log",
-    sidebar_roll_dice: "Roll Dice",
-    sidebar_turn: "{name}'s turn",
-    sidebar_no_turn: "—",
-    player_stats: "Faith: {faith} · Tile {pos}",
-    player_skip_suffix: " · Skip x{n}",
-    modal_continue: "Continue",
-    win_title: "🌅 The Promised Land!",
-    win_subtitle: "...has been reached by...",
-    win_play_again: "Play Again",
-    win_row: "Tile {pos} · Faith {faith}",
-    board_aria: "Game board",
-    lang_switch_aria: "Language",
-    tile_tooltip_start: "{label} (Start)",
-    tile_tooltip_goal: "{label} (Goal)",
-    tile_tooltip_plague_spent: "{title} — already triggered: {effect}",
-    tile_tooltip_plague_active: "{title} — {flavor}",
-    tile_label_goshen: "Goshen",
-    tile_label_path: "Path",
-    tile_label_manna: "Manna",
-    tile_label_rest: "Rest",
-    tile_label_edict: "Pharaoh's Edict",
-    tile_label_goal: "Promised Land",
-    log_turn_order: "🎲 Turn order: {order}",
-    log_rolloff: "🎲 Roll-off — {detail}",
-    log_rolloff_tie: "↻ Tie! Re-roll — {detail}",
-    rolloff_title: "Roll for turn order",
-    rolloff_prompt: "{name} — tap to roll",
-    rolloff_tie_note: "Tie! Those players re-roll.",
-    rolloff_done: "Turn order set!",
-    rolloff_roll: "🎲 Roll",
-    rolloff_start: "Start Game",
-    log_rest_skip: "{name} is resting and skips this turn.",
-    log_rolled: "{name} rolled a {n}.",
-    log_reached_goal: "🌅 {name} reached the Promised Land!",
-    log_overshoot: "🛬 {name} overshot the goal and rebounds {n} step(s).",
-    log_rests_wilderness: "{name} rests in the wilderness.",
-    log_gathered_manna: "🍞 {name} gathered manna (+1 Faith).",
-    log_tax_paid: "📜 {name} pays a Pharaoh's tax (-1 Faith).",
-    log_tax_pushback: "📜 {name} can't pay — pushed back {n} tile(s).",
-    log_old_plague: "{name} crosses the old {short} site (already resolved).",
-    log_plague_fires: "⚡ {title} fires for {name}.",
-    log_flies_others: "🪰 Others pushed back 1.",
-    log_hail_sweep: "🧊 Hail sweeps players at tile ≤ {cutoff} back 3.",
-    log_passover_buff: "🌅 {name} is passed over and blessed (+3 Faith).",
-    color_coral: "Coral",
-    color_teal: "Teal",
-    color_saffron: "Saffron",
-    color_plum: "Plum",
-    swatch_aria: "{color} ({shape}) for Player {n}",
-    plague_blood_title: "1. Nile Turns Red",
-    plague_blood_flavor: "The river runs the color of clay; jars stand empty along the bank.",
-    plague_blood_effect: "You lose 1 Faith Token.",
-    plague_frogs_title: "2. Frogs Everywhere",
-    plague_frogs_flavor: "Smiling frogs hop across every path; you slip and stumble.",
-    plague_frogs_effect: "Move back 2 tiles.",
-    plague_lice_title: "3. Lice & Gnats",
-    plague_lice_flavor: "The dust itches. You sit down to scratch and the road waits.",
-    plague_lice_effect: "Skip your next turn.",
-    plague_flies_title: "4. Swarming Flies",
-    plague_flies_flavor: "A buzzing cloud rolls past — but Goshen's people are spared.",
-    plague_flies_effect: "Every OTHER player moves back 1.",
-    plague_livestock_title: "5. Livestock Pestilence",
-    plague_livestock_flavor: "The herds grow quiet. Pharaoh's stables stand empty.",
-    plague_livestock_effect: "You lose 2 Faith Tokens.",
-    plague_boils_title: "6. Boils",
-    plague_boils_flavor: "Polka-dot bumps appear; you need to rest and recover.",
-    plague_boils_effect: "Skip next turn AND lose 1 Faith Token.",
-    plague_hail_title: "7. Hail Storm",
-    plague_hail_flavor: "Round blue gems clatter from the sky across the field.",
-    plague_hail_effect: "Every player at or behind you (including you) moves back 3.",
-    plague_locusts_title: "8. Locusts",
-    plague_locusts_flavor: "A goofy green cloud descends and eats the harvest clean.",
-    plague_locusts_effect: "You lose ALL your Faith Tokens.",
-    plague_darkness_title: "9. Three Days of Darkness",
-    plague_darkness_flavor: "Even the lamps cannot find the path. Better to wait it out.",
-    plague_darkness_effect: "Skip your next TWO turns.",
-    plague_passover_title: "10. Death of the Firstborn",
-    plague_passover_flavor: "At midnight the final plague strikes Egypt's firstborn — but every home marked with lamb's blood is passed over. Israel's households are spared, and at dawn the people are finally free to leave.",
-    plague_passover_effect: "You are passed over and spared — gain 3 Faith Tokens.",
-    // --- added by merge: winding board + faith-shield rules ---
-    tile_label_miracle: "Staff of Moses",
-    player_staff_suffix: " · 🪄",
-    rules_panel_title: "How to Survive",
-    rules_line_1: "🎲 Race from Goshen 🏜️ to the Promised Land 🌟.",
-    rules_line_2: "🙏 Faith is your shield — spend it to leap frogs, shelter from hail, outlast darkness.",
-    rules_line_3: "🪄 At 🪄 tiles, gain the Staff of Moses (cancel any plague), then a Blessing Charm 🧿 (block faith loss).",
-    rules_line_4: "🍞 Manna +1 Faith · ⛺ Tabernacle heals a skipped turn · 📜 Edict taxes 1 Faith.",
-    rules_line_5: "⚡ Each plague strikes only the first to reach it — then it's spent.",
-    modal_staff_btn: "🪄 Use the Staff of Moses",
-    modal_endure: "Endure it",
-    modal_endure_full: "Endure it fully",
-    mitigate_frogs: "🙏 Leap over the frogs (−1 Faith)",
-    mitigate_lice: "🙏 Press on despite the itch (−1 Faith)",
-    mitigate_boils: "🙏 Bind the boils and push on (−2 Faith)",
-    mitigate_hail: "🙏 Duck into shelter (−1 Faith)",
-    mitigate_darkness: "🙏 Carry a lamp through the dark (−2 Faith)",
-    log_rest_heal: "⛺ {name} shelters in the tabernacle and shakes off a setback (skip −1).",
-    log_rest_renew: "⛺ {name} rests at the tabernacle and is renewed (+1 Faith).",
-    log_miracle_get: "🪄 {name} takes up the Staff of Moses — one plague can now be turned aside!",
-    log_miracle_extra: "🪄 {name} already holds the Staff — the wonder grants +2 Faith instead.",
-    log_staff_negate: "🪄 {name} raises the Staff of Moses — {short} is turned aside!",
-    log_faith_weather: "🙏 {name} stands firm in faith (−{cost} Faith) and weathers {short}.",
-    log_hail_others: "🧊 Others at tile ≤ {cutoff} are still driven back 3.",
-    log_passover_staff: "🪄 {name} is also given the Staff of Moses.",
-    // --- items, inventory & inspect details ---
-    item_staff_name: "Staff of Moses",
-    item_staff_desc: "Cancel any one plague outright.",
-    item_charm_name: "Blessing Charm",
-    item_charm_desc: "Ward off one faith-draining plague (Blood, Pestilence, Locusts).",
-    modal_charm_btn: "🧿 Use the Blessing Charm",
-    log_miracle_charm: "🧿 {name} receives a Blessing Charm!",
-    log_charm_negate: "🧿 {name}'s Blessing Charm wards off {short}!",
-    info_close: "Close",
-    info_items_none: "No items yet.",
-    detail_faith: "🙏 Faith: {faith}",
-    detail_pos: "📍 Tile {pos} of 29",
-    detail_skip: "💤 Skipping next {n} turn(s)",
-    detail_turn_now: "⭐ Taking their turn now",
-    detail_items_title: "Items held",
-    detail_defence_title: "How to get through it",
-    detail_defence_staff: "🪄 Staff of Moses — cancel it entirely",
-    detail_defence_charm: "🧿 Blessing Charm — ward it off",
-    detail_defence_faith: "🙏 Spend {cost} Faith to shrug it off",
-    detail_defence_accept: "Otherwise, take the hit.",
-    detail_plague_spent: "✓ Already triggered — this stretch of road is now safe.",
-    detail_desc_start: "Goshen — where every journey begins.",
-    detail_desc_path: "Open trail. Nothing happens here — just catch your breath.",
-    detail_desc_manna: "Gather manna: +1 Faith.",
-    detail_desc_rest: "Tabernacle: shelter to clear a skipped turn, or rest for +1 Faith.",
-    detail_desc_edict: "Pharaoh's Edict: pay 1 Faith — or be pushed back 2 tiles if you can't.",
-    detail_desc_miracle: "A wonder awaits: take the Staff of Moses (or a Blessing Charm, or +2 Faith if you already hold them).",
-    detail_desc_goal: "The Promised Land — reach it to win the race.",
-  },
-  "zh-TW": {
-    page_title: "十災大富翁",
-    app_title: "🏜️ 十災大富翁",
-    setup_subtitle: "一場從歌珊地通往應許之地的溫馨同桌賽局。",
-    setup_how_many: "玩家人數?",
-    setup_player_placeholder: "玩家 {n} 姓名",
-    setup_default_name: "玩家 {n}",
-    setup_start_btn: "開始遊戲",
-    alert_need_color: "每位玩家都要選一種顏色。",
-    alert_duplicate_color: "有兩位玩家選了同一種顏色。",
-    header_new_game: "新遊戲",
-    confirm_new_game: "要放棄目前牌局並回到設定畫面嗎?",
-    sidebar_players: "玩家",
-    sidebar_event_log: "事件紀錄",
-    sidebar_roll_dice: "擲骰",
-    sidebar_turn: "{name} 的回合",
-    sidebar_no_turn: "—",
-    player_stats: "信心:{faith} · 格 {pos}",
-    player_skip_suffix: " · 暫停 x{n}",
-    modal_continue: "繼續",
-    win_title: "🌅 抵達應許之地!",
-    win_subtitle: "……由這位玩家率先抵達……",
-    win_play_again: "再玩一次",
-    win_row: "格 {pos} · 信心 {faith}",
-    board_aria: "遊戲板",
-    lang_switch_aria: "語言",
-    tile_tooltip_start: "{label}(起點)",
-    tile_tooltip_goal: "{label}(終點)",
-    tile_tooltip_plague_spent: "{title} — 已觸發過:{effect}",
-    tile_tooltip_plague_active: "{title} — {flavor}",
-    tile_label_goshen: "歌珊地",
-    tile_label_path: "路徑",
-    tile_label_manna: "嗎哪",
-    tile_label_rest: "歇息",
-    tile_label_edict: "法老諭令",
-    tile_label_goal: "應許之地",
-    log_turn_order: "🎲 出牌順序:{order}",
-    log_rolloff: "🎲 擲骰定先後 — {detail}",
-    log_rolloff_tie: "↻ 平手,重擲 — {detail}",
-    rolloff_title: "擲骰決定先後",
-    rolloff_prompt: "輪到 {name} 擲骰",
-    rolloff_tie_note: "平手!這些玩家重擲",
-    rolloff_done: "先後已定!",
-    rolloff_roll: "🎲 擲骰",
-    rolloff_start: "開始遊戲",
-    log_rest_skip: "{name} 正在歇息,本回合略過。",
-    log_rolled: "{name} 擲出了 {n} 點。",
-    log_reached_goal: "🌅 {name} 抵達了應許之地!",
-    log_overshoot: "🛬 {name} 衝過頭,反彈退回 {n} 步。",
-    log_rests_wilderness: "{name} 在曠野中歇息。",
-    log_gathered_manna: "🍞 {name} 撿到嗎哪(+1 信心)。",
-    log_tax_paid: "📜 {name} 向法老繳了稅(-1 信心)。",
-    log_tax_pushback: "📜 {name} 付不出稅金 — 被推回 {n} 格。",
-    log_old_plague: "{name} 經過舊的「{short}」現場(早已平息)。",
-    log_plague_fires: "⚡ {title} 在 {name} 身上發動。",
-    log_flies_others: "🪰 其他玩家各退 1 格。",
-    log_hail_sweep: "🧊 冰雹掃過第 ≤ {cutoff} 格的所有玩家,各退 3 格。",
-    log_passover_buff: "🌅 {name} 蒙逾越保全、得著祝福(+3 信心)。",
-    color_coral: "珊瑚紅",
-    color_teal: "湖水綠",
-    color_saffron: "藏紅黃",
-    color_plum: "梅子紫",
-    swatch_aria: "{color}({shape})— 給玩家 {n}",
-    plague_blood_title: "第一災 尼羅河變紅",
-    plague_blood_flavor: "河水染成泥土的顏色,岸邊的水罐一只只空著。",
-    plague_blood_effect: "失去 1 顆信心代幣。",
-    plague_frogs_title: "第二災 青蛙遍地",
-    plague_frogs_flavor: "笑臉青蛙從每一條路上跳過,你一個踉蹌打滑跌倒。",
-    plague_frogs_effect: "後退 2 格。",
-    plague_lice_title: "第三災 蝨子與蚊蚋",
-    plague_lice_flavor: "塵土叫人發癢,你坐下抓癢,腳下的路只能耐心等候。",
-    plague_lice_effect: "下一回合略過。",
-    plague_flies_title: "第四災 蒼蠅成群",
-    plague_flies_flavor: "嗡嗡作響的雲團掠過 — 歌珊地的人卻得以倖免。",
-    plague_flies_effect: "其他每位玩家各後退 1 格。",
-    plague_livestock_title: "第五災 牲畜瘟疫",
-    plague_livestock_flavor: "群獸靜默下來,法老的牲畜欄空蕩無聲。",
-    plague_livestock_effect: "失去 2 顆信心代幣。",
-    plague_boils_title: "第六災 膿瘡",
-    plague_boils_flavor: "圓點似的腫包紛紛冒出,你需要歇下來休養。",
-    plague_boils_effect: "下一回合略過,並失去 1 顆信心代幣。",
-    plague_hail_title: "第七災 冰雹風暴",
-    plague_hail_flavor: "圓圓的藍色冰珠自天而降,劈哩啪啦灑滿田野。",
-    plague_hail_effect: "與你同格或落在你後方的玩家(含你自己)皆後退 3 格。",
-    plague_locusts_title: "第八災 蝗蟲",
-    plague_locusts_flavor: "傻氣的綠色雲團壓境,把田裡的收成一掃而空。",
-    plague_locusts_effect: "失去你所有的信心代幣。",
-    plague_darkness_title: "第九災 三日黑暗",
-    plague_darkness_flavor: "燈火也照不出路徑,還是耐心等候比較穩妥。",
-    plague_darkness_effect: "略過接下來的兩個回合。",
-    plague_passover_title: "第十災 擊殺長子",
-    plague_passover_flavor: "午夜時分,末一災擊殺埃及一切頭生的;但門上塗了羊血的家戶都被逾越、得以保全。以色列人蒙保守,黎明時終於可以啟程離開。",
-    plague_passover_effect: "你被逾越保全、蒙福——獲得 3 顆信心代幣。",
-    // --- 合併新增:蜿蜒地圖 + 信心護盾玩法 ---
-    tile_label_miracle: "摩西杖",
-    player_staff_suffix: " · 🪄",
-    rules_panel_title: "生存指南",
-    rules_line_1: "🎲 從歌珊地 🏜️ 一路擲骰,搶先抵達應許之地 🌟。",
-    rules_line_2: "🙏 信心是你的護盾 — 花信心可躍過青蛙、躲避冰雹、熬過黑暗。",
-    rules_line_3: "🪄 在 🪄 格先得摩西杖(化解任意災害),再得祝福護符 🧿(擋下信心流失)。",
-    rules_line_4: "🍞 嗎哪 +1 信心 · ⛺ 會幕消除一次暫停 · 📜 法老諭令扣 1 信心。",
-    rules_line_5: "⚡ 每個災害只打第一個踩到的人 — 之後該段路就安全了。",
-    modal_staff_btn: "🪄 使用摩西杖(化解此災)",
-    modal_endure: "承受後果",
-    modal_endure_full: "硬扛全部後果",
-    mitigate_frogs: "🙏 縱身躍過青蛙(−1 信心)",
-    mitigate_lice: "🙏 咬牙忍癢前進(−1 信心)",
-    mitigate_boils: "🙏 包紮膿瘡硬撐(−2 信心)",
-    mitigate_hail: "🙏 鑽入避難所躲避(−1 信心)",
-    mitigate_darkness: "🙏 提燈穿越黑暗(−2 信心)",
-    log_rest_heal: "⛺ {name} 在會幕歇息,甩掉一次暫停(暫停 −1)。",
-    log_rest_renew: "⛺ {name} 在會幕安息得力(+1 信心)。",
-    log_miracle_get: "🪄 {name} 拿起了摩西杖 — 可化解一個災害!",
-    log_miracle_extra: "🪄 {name} 已持有摩西杖,神蹟改為賜下 +2 信心。",
-    log_staff_negate: "🪄 {name} 舉起摩西杖 — 「{short}」被化解了!",
-    log_faith_weather: "🙏 {name} 憑信心站穩(−{cost} 信心),挺過了「{short}」。",
-    log_hail_others: "🧊 位在第 {cutoff} 格(含)之前的其他人仍被打退 3 格。",
-    log_passover_staff: "🪄 {name} 同時獲得了摩西杖。",
-    // --- 道具、物品欄與詳情 ---
-    item_staff_name: "摩西杖",
-    item_staff_desc: "可完全化解任意一個災害。",
-    item_charm_name: "祝福護符",
-    item_charm_desc: "可擋下一個奪取信心的災害(血災、畜疫、蝗災)。",
-    modal_charm_btn: "🧿 使用祝福護符(擋下此災)",
-    log_miracle_charm: "🧿 {name} 獲得了祝福護符!",
-    log_charm_negate: "🧿 {name} 的祝福護符擋下了「{short}」!",
-    info_close: "關閉",
-    info_items_none: "尚無道具。",
-    detail_faith: "🙏 信心:{faith}",
-    detail_pos: "📍 第 {pos} / 29 格",
-    detail_skip: "💤 接下來暫停 {n} 回合",
-    detail_turn_now: "⭐ 目前正輪到他",
-    detail_items_title: "持有道具",
-    detail_defence_title: "可以怎麼應對",
-    detail_defence_staff: "🪄 摩西杖 — 完全化解",
-    detail_defence_charm: "🧿 祝福護符 — 擋下此災",
-    detail_defence_faith: "🙏 花 {cost} 信心抵擋",
-    detail_defence_accept: "否則只能承受後果。",
-    detail_plague_spent: "✓ 已經觸發過 — 這段路現在很安全。",
-    detail_desc_start: "歌珊地 — 一切旅程的起點。",
-    detail_desc_path: "開闊的小徑。這裡什麼都不會發生,喘口氣吧。",
-    detail_desc_manna: "撿拾嗎哪:+1 信心。",
-    detail_desc_rest: "會幕:可消除一次暫停,或安息得 +1 信心。",
-    detail_desc_edict: "法老諭令:繳 1 信心;繳不出則後退 2 格。",
-    detail_desc_miracle: "神蹟在此:獲得摩西杖(若已持有則得祝福護符,或 +2 信心)。",
-    detail_desc_goal: "應許之地 — 抵達即贏得比賽。",
-  },
+const state=window.state={
+  mode:null, submode:null, count:2, picks:[],
+  players:[], turnIdx:0, busy:false, log:[],
+  taskResolve:null, infoPrev:null,
 };
 
-const TILE_LABEL_KEY = {
-  start:   "tile_label_goshen",
-  path:    "tile_label_path",
-  manna:   "tile_label_manna",
-  rest:    "tile_label_rest",
-  edict:   "tile_label_edict",
-  miracle: "tile_label_miracle",
-  goal:    "tile_label_goal",
-};
-
-const LANG_STORAGE_KEY = "tpm.lang";
-function detectInitialLang() {
-  try {
-    const stored = localStorage.getItem(LANG_STORAGE_KEY);
-    if (stored && I18N[stored]) return stored;
-  } catch (e) { /* localStorage disabled — fall through */ }
-  const nav = (navigator.language || navigator.userLanguage || "").toLowerCase();
-  if (nav.startsWith("zh")) return "zh-TW";
-  return "en";
-}
-let currentLang = detectInitialLang();
-
-function t(key, params) {
-  const dict = I18N[currentLang] || I18N.en;
-  let s = dict[key];
-  if (s === undefined) s = I18N.en[key];
-  if (s === undefined) return key;
-  if (params) {
-    s = s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? String(params[k]) : `{${k}}`));
-  }
-  return s;
-}
-function plagueT(p, field) { return t(`plague_${p.id}_${field}`); }
-function colorName(c) { return t(`color_${c.id}`); }
-function tileLabel(tile) {
-  if (tile.type === "plague") {
-    return plagueT(PLAGUE_DEFS[tile.plague], "title");
-  }
-  return t(TILE_LABEL_KEY[tile.type] || "tile_label_path");
-}
-
-function setLanguage(lang) {
-  if (!I18N[lang] || lang === currentLang) {
-    // still update active button styling for double-clicks
-    syncLangSwitchUI();
-    return;
-  }
-  currentLang = lang;
-  try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) {}
-  document.documentElement.setAttribute("lang", lang === "zh-TW" ? "zh-Hant" : "en");
-  applyStaticI18n();
-  // B-2: regenerate default player names ("Player N" / "玩家 N") in the new
-  // language. Untouched: players whose user typed a real name.
-  state.players.forEach(p => {
-    if (p.nameIsDefault) p.name = t("setup_default_name", { n: p.defaultIdx });
-  });
-  // re-render any dynamic regions that may be visible
-  renderSetup();
-  if (state.players.length) {
-    renderBoard();
-    renderPlayers();
-    renderLog();
-    updateTurnUI();
-  }
-  // refresh winner standings if win screen is up
-  if (!document.getElementById("win-screen").classList.contains("hidden")) {
-    refreshWinScreen();
-  }
-  // L-2: if a plague modal is currently open, re-render its contents in the
-  // new language. Modal contents are set imperatively (not via DOM-bound keys),
-  // so without this they'd freeze in the language they were opened in.
-  if (state.modalPlague
-      && !document.getElementById("modal-backdrop").classList.contains("hidden")) {
-    applyModalContent(state.modalPlague);
-  }
-  // Same for the read-only inspect modal, if it happens to be open.
-  refreshInfoModal();
-  // And the roll-off ceremony, if it's mid-flow.
-  if (state.ceremony) renderRollOff();
-  syncLangSwitchUI();
-}
-
-function syncLangSwitchUI() {
-  document.querySelectorAll(".lang-switch button").forEach(b => {
-    b.classList.toggle("active", b.dataset.lang === currentLang);
-    b.setAttribute("aria-pressed", b.dataset.lang === currentLang ? "true" : "false");
-  });
-}
-
-function applyStaticI18n() {
-  document.title = t("page_title");
-  const set = (id, key, params) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = t(key, params);
-  };
-  set("setup-title", "app_title");
-  set("setup-subtitle", "setup_subtitle");
-  set("setup-how-many", "setup_how_many");
-  set("start-btn", "setup_start_btn");
-  set("game-title", "app_title");
-  set("new-game-btn", "header_new_game");
-  set("players-panel-title", "sidebar_players");
-  set("log-panel-title", "sidebar_event_log");
-  set("roll-btn", "sidebar_roll_dice");
-  set("rules-panel-title", "rules_panel_title");
-  for (let i = 1; i <= 5; i++) set("rules-line-" + i, "rules_line_" + i);
-  set("info-close", "info_close");
-  set("modal-continue", "modal_continue");
-  set("win-title", "win_title");
-  set("win-subtitle", "win_subtitle");
-  set("play-again-btn", "win_play_again");
-  const board = document.getElementById("board");
-  if (board) board.setAttribute("aria-label", t("board_aria"));
-  // reviewer B-1 / qa A2+A4: translate the .lang-switch group aria-label so
-  // screen readers in zh-TW announce "語言" instead of frozen "Language".
-  const langSwitchAria = t("lang_switch_aria");
-  ["lang-switch-setup", "lang-switch-game"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.setAttribute("aria-label", langSwitchAria);
-  });
-}
-
-// Wire up language switcher buttons (delegated; both setup + game switchers share the same handler)
-document.addEventListener("click", e => {
-  const btn = e.target.closest(".lang-switch button[data-lang]");
-  if (btn) setLanguage(btn.dataset.lang);
-});
-
-// 30-tile journey. Plague indices (2,5,8,11,14,16,19,22,25,28) are fixed by the
-// canonical Exodus order; tiles between them are a richer mix of helps and tolls.
-// label is a fallback only; visible text comes from tileLabel()/i18n.
-const BOARD = [
-  { idx: 0,  type: "start",   icon: "🏜️", label: "Goshen" },
-  { idx: 1,  type: "path",    icon: "🐫", label: "Path" },
-  { idx: 2,  type: "plague",  plague: "blood" },
-  { idx: 3,  type: "manna",   icon: "🍞", label: "Manna" },
-  { idx: 4,  type: "path",    icon: "👣", label: "Path" },
-  { idx: 5,  type: "plague",  plague: "frogs" },
-  { idx: 6,  type: "edict",   icon: "📜", label: "Pharaoh's Edict" },
-  { idx: 7,  type: "rest",    icon: "⛺", label: "Rest" },
-  { idx: 8,  type: "plague",  plague: "lice" },
-  { idx: 9,  type: "manna",   icon: "🍞", label: "Manna" },
-  { idx: 10, type: "miracle", icon: "🪄", label: "Staff of Moses" },
-  { idx: 11, type: "plague",  plague: "flies" },
-  { idx: 12, type: "rest",    icon: "⛺", label: "Rest" },
-  { idx: 13, type: "edict",   icon: "📜", label: "Pharaoh's Edict" },
-  { idx: 14, type: "plague",  plague: "livestock" },
-  { idx: 15, type: "manna",   icon: "🍞", label: "Manna" },
-  { idx: 16, type: "plague",  plague: "boils" },
-  { idx: 17, type: "rest",    icon: "⛺", label: "Rest" },
-  { idx: 18, type: "edict",   icon: "📜", label: "Pharaoh's Edict" },
-  { idx: 19, type: "plague",  plague: "hail" },
-  { idx: 20, type: "path",    icon: "👣", label: "Path" },
-  { idx: 21, type: "rest",    icon: "⛺", label: "Rest" },
-  { idx: 22, type: "plague",  plague: "locusts" },
-  { idx: 23, type: "manna",   icon: "🍞", label: "Manna" },
-  { idx: 24, type: "miracle", icon: "🪄", label: "Staff of Moses" },
-  { idx: 25, type: "plague",  plague: "darkness" },
-  { idx: 26, type: "path",    icon: "🐫", label: "Path" },
-  { idx: 27, type: "path",    icon: "👣", label: "Path" },
-  { idx: 28, type: "plague",  plague: "passover" },
-  { idx: 29, type: "goal",    icon: "🌟", label: "Promised Land" },
-];
-
-// Hand-placed winding-trail coordinates (centre points in an 860×540 space).
-// Deliberately irregular — a meandering desert road, not a tidy grid.
-const POS = [
-  [60, 490], [150, 462], [244, 496], [338, 464], [432, 496],
-  [526, 466], [620, 498], [712, 466], [792, 408], [762, 344],
-  [668, 372], [574, 340], [480, 372], [386, 338], [292, 372],
-  [198, 340], [116, 300], [150, 232], [246, 256], [340, 224],
-  [434, 254], [528, 222], [622, 254], [714, 222], [792, 162],
-  [700, 110], [606, 134], [500, 104], [392, 126], [250, 74],
-];
-
-// --------- State ---------
-const state = window.state = {
-  players: [],         // {id, name, color, pos, faith, skipTurns}
-  turnIdx: 0,
-  plagueSpent: {},     // plague.id -> true
-  log: [],
-  busy: false,         // lock while animating/modal up
-  setupCount: 2,
-  setupSelectedColors: [],
-  modalPlague: null,   // L-2: plague currently shown in modal (null when closed)
-  modalPlayer: null,   // player the open modal applies to (for choice re-render)
-};
-
-// --------- Setup screen rendering ---------
-function renderSetup() {
-  const rows = document.getElementById("player-rows");
-  rows.innerHTML = "";
-  state.setupSelectedColors = state.setupSelectedColors.slice(0, state.setupCount);
-  for (let i = 0; i < state.setupCount; i++) {
-    const row = document.createElement("div");
-    row.className = "player-row";
-    const defaultName = t("setup_default_name", { n: i + 1 });
-    const placeholder = t("setup_player_placeholder", { n: i + 1 });
-    // B-2: only the user-typed name lives in state. Default text is recomputed
-    // each render so a language switch re-renders the input with the current
-    // language's "Player N" / "玩家 N" without overwriting anything typed.
-    const typedName = (state.setupSelectedColors[i]?.name || "").trim();
-    row.innerHTML = `
-      <input type="text" placeholder="${escapeHtml(placeholder)}" value="${escapeHtml(typedName || defaultName)}" data-idx="${i}" />
-      <div class="color-swatches" data-idx="${i}"></div>`;
-    rows.appendChild(row);
-    const swatches = row.querySelector(".color-swatches");
-    PRESET_COLORS.forEach((c, ci) => {
-      const sw = document.createElement("div");
-      sw.className = "swatch";
-      sw.style.background = c.hex;
-      sw.textContent = c.shape;
-      sw.title = colorName(c);
-      sw.dataset.cidx = ci;
-      sw.dataset.row = i;
-      sw.setAttribute("role", "button");
-      sw.setAttribute("tabindex", "0");
-      sw.setAttribute("aria-label", t("swatch_aria", { color: colorName(c), shape: c.shape, n: i + 1 }));
-      swatches.appendChild(sw);
-    });
-    // default color: first unused. `name` stays undefined until the user types
-    // (B-2): if we seeded it with the localized default, switching languages
-    // afterwards would freeze "Player N" / "玩家 N" in the wrong language.
-    if (!state.setupSelectedColors[i]) {
-      const used = new Set(state.setupSelectedColors.filter(Boolean).map(x => x.cidx));
-      for (let ci = 0; ci < PRESET_COLORS.length; ci++) {
-        if (!used.has(ci)) { state.setupSelectedColors[i] = { cidx: ci }; break; }
-      }
+// ============================================================
+// Setup
+// ============================================================
+function renderSetup(){
+  document.querySelectorAll("#mode-row button").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));
+  document.querySelectorAll("#submode-row button").forEach(b=>b.classList.toggle("active",b.dataset.sub===state.submode));
+  document.querySelectorAll("#count-row button").forEach(b=>b.classList.toggle("active",+b.dataset.n===state.count));
+  const rows=document.getElementById("player-rows"); rows.innerHTML="";
+  state.picks=state.picks.slice(0,state.count);
+  for(let i=0;i<state.count;i++){
+    if(!state.picks[i]){
+      const used=new Set(state.picks.filter(Boolean).map(x=>x.av));
+      for(let a=0;a<AVATARS.length;a++){ if(!used.has(a)){ state.picks[i]={av:a,name:""}; break; } }
     }
-  }
-  refreshSwatchStates();
-}
-
-function refreshSwatchStates() {
-  const taken = new Set(state.setupSelectedColors.map(x => x?.cidx).filter(v => v !== undefined));
-  document.querySelectorAll(".swatch").forEach(sw => {
-    const row = +sw.dataset.row;
-    const cidx = +sw.dataset.cidx;
-    const sel = state.setupSelectedColors[row]?.cidx === cidx;
-    const taken_other = !sel && taken.has(cidx);
-    sw.classList.toggle("selected", sel);
-    sw.classList.toggle("taken", taken_other);
-    sw.setAttribute("aria-pressed", sel ? "true" : "false");
-    sw.setAttribute("aria-disabled", taken_other ? "true" : "false");
-    sw.setAttribute("tabindex", taken_other ? "-1" : "0");
-  });
-}
-
-document.getElementById("player-count-row").addEventListener("click", e => {
-  if (e.target.tagName !== "BUTTON") return;
-  const n = +e.target.dataset.n;
-  state.setupCount = n;
-  document.querySelectorAll("#player-count-row button").forEach(b => b.classList.toggle("active", +b.dataset.n === n));
-  renderSetup();
-});
-
-function selectSwatch(sw) {
-  if (!sw || !sw.classList || !sw.classList.contains("swatch")) return;
-  if (sw.classList.contains("taken")) return;
-  const row = +sw.dataset.row;
-  const cidx = +sw.dataset.cidx;
-  state.setupSelectedColors[row] = { ...state.setupSelectedColors[row], cidx };
-  refreshSwatchStates();
-}
-
-document.getElementById("player-rows").addEventListener("click", e => {
-  selectSwatch(e.target);
-});
-
-document.getElementById("player-rows").addEventListener("keydown", e => {
-  if (!e.target.classList || !e.target.classList.contains("swatch")) return;
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    selectSwatch(e.target);
-  }
-});
-
-document.getElementById("player-rows").addEventListener("input", e => {
-  if (e.target.tagName === "INPUT") {
-    const row = +e.target.dataset.idx;
-    state.setupSelectedColors[row] = { ...(state.setupSelectedColors[row] || { cidx: row }), name: e.target.value };
-  }
-});
-
-document.getElementById("start-btn").addEventListener("click", () => {
-  const players = [];
-  for (let i = 0; i < state.setupCount; i++) {
-    const sel = state.setupSelectedColors[i];
-    if (!sel || sel.cidx === undefined) { alert(t("alert_need_color")); return; }
-    // ensure unique colors (defensive — UI should already block)
-    if (players.some(p => p.cidx === sel.cidx)) { alert(t("alert_duplicate_color")); return; }
-    const typed = (sel.name || "").trim();
-    const nameIsDefault = !typed;
-    const name = typed || t("setup_default_name", { n: i + 1 });
-    // B-2: keep the original setup-row number + a default-name flag so
-    // setLanguage() can rebuild "Player N" / "玩家 N" without overwriting
-    // anything the user typed.
-    players.push({ id: i, name, nameIsDefault, defaultIdx: i + 1, cidx: sel.cidx, color: PRESET_COLORS[sel.cidx], pos: 0, faith: 3, skipTurns: 0, items: [] });
-  }
-  // Decide turn order with a dice roll-off (highest first; ties re-roll). Real
-  // players get the interactive ceremony; under test automation we resolve it
-  // instantly (same logic + logs) so the suite isn't blocked.
-  if (window.FORCE_ROLLOFF || !navigator.webdriver) {
-    beginRollOff(players);
-  } else {
-    const { ordered, rounds } = rollForOrder(players);
-    startGame(ordered);
-    logRollOff(rounds, ordered);
-  }
-});
-
-// Push the roll-off result to the event log: each round's rolls (avatar+value,
-// language-independent), then the resulting order on top.
-function logRollOff(rounds, ordered) {
-  rounds.forEach(rnd => {
-    const detail = rnd.players.map(p => `${p.color.shape} ${rnd.rolls[p.id]}`).join(" · ");
-    pushLog(rnd.kind === "tie" ? "log_rolloff_tie" : "log_rolloff", { detail });
-  });
-  pushLog("log_turn_order", { playerIds: ordered.map(p => p.id) });
-}
-
-// Roll a die per player; order by value descending. Players that tie re-roll
-// among themselves (recursively) so the final order is fully broken.
-function rollForOrder(players) {
-  const rounds = [];
-  let guard = 0;
-  const d6 = () => 1 + Math.floor(Math.random() * 6);
-  function order(group) {
-    if (group.length <= 1) return group.slice();
-    if (++guard > 20) return group.slice();   // unbreakable (e.g. stubbed RNG) → keep order
-    const rolls = {};
-    group.forEach(p => { rolls[p.id] = d6(); });
-    rounds.push({ kind: rounds.length === 0 ? "round" : "tie", players: group.slice(), rolls });
-    const byVal = {};
-    group.forEach(p => { (byVal[rolls[p.id]] = byVal[rolls[p.id]] || []).push(p); });
-    let result = [];
-    Object.keys(byVal).map(Number).sort((a, b) => b - a).forEach(v => {
-      const g = byVal[v];
-      result = result.concat(g.length === 1 ? g : order(g));   // re-roll within a tie
+    const row=document.createElement("div"); row.className="player-row";
+    row.innerHTML=`<input type="text" placeholder="玩家 ${i+1}" value="${escapeHtml(state.picks[i].name||"")}" data-idx="${i}"><div class="swatches" data-idx="${i}"></div>`;
+    rows.appendChild(row);
+    const sw=row.querySelector(".swatches");
+    AVATARS.forEach((a,ai)=>{
+      const el=document.createElement("div"); el.className="swatch"; el.style.background=a.hex; el.textContent=a.emoji;
+      el.dataset.av=ai; el.dataset.row=i; el.setAttribute("role","button"); el.setAttribute("tabindex","0");
+      el.title=a.name; sw.appendChild(el);
     });
-    return result;
   }
-  return { ordered: order(players.slice()), rounds };
+  refreshSwatches();
 }
-
-// ---- Interactive roll-off ceremony (real players) ----
-// segments[] is the building final order: each entry is a resolved {player} or
-// an unresolved {players:[…]} group that still needs a round to break ties.
-function beginRollOff(players) {
-  state.ceremony = {
-    players: players,
-    segments: [{ players: players.slice() }],
-    active: null, pending: [], rolls: {},
-    rounds: [], roundsRun: 0, busy: false, done: false, isTie: false, ordered: null,
-    reduced: !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches),
-  };
-  document.getElementById("rolloff-backdrop").classList.remove("hidden");
-  startRollOffRound();
-  document.getElementById("rolloff-roll").focus();
-}
-
-function startRollOffRound() {
-  const c = state.ceremony; if (!c) return;
-  const grp = c.segments.find(s => !s.player && s.players.length > 1);
-  if (!grp) { finishRollOff(); return; }
-  c.active = grp;
-  c.pending = grp.players.slice();
-  c.rolls = {};
-  c.isTie = c.roundsRun > 0;
-  renderRollOff();
-}
-
-async function rollOffRollCurrent() {
-  const c = state.ceremony;
-  if (!c || c.busy || c.done || !c.active || c.pending.length === 0) return;
-  c.busy = true;
-  renderRollOff();
-  const p = c.pending[0];
-  const v = 1 + Math.floor(Math.random() * 6);
-  await animateDieInto(document.getElementById("rolloff-die-" + p.id), v);
-  c.rolls[p.id] = v; p._rv = v;
-  c.pending.shift();
-  c.busy = false;
-  renderRollOff();
-  if (c.pending.length === 0) finishRollOffRound();
-}
-
-function finishRollOffRound() {
-  const c = state.ceremony; if (!c) return;
-  c.rounds.push({ kind: c.isTie ? "tie" : "round", players: c.active.players.slice(), rolls: Object.assign({}, c.rolls) });
-  c.roundsRun++;
-  const byVal = {};
-  c.active.players.forEach(p => { (byVal[c.rolls[p.id]] = byVal[c.rolls[p.id]] || []).push(p); });
-  const pieces = [];
-  Object.keys(byVal).map(Number).sort((a, b) => b - a).forEach(v => {
-    const g = byVal[v];
-    if (g.length === 1) { g[0]._rv = v; pieces.push({ player: g[0] }); }
-    else pieces.push({ players: g });
+function refreshSwatches(){
+  const taken=new Set(state.picks.map(p=>p&&p.av).filter(v=>v!==undefined&&v!==null));
+  document.querySelectorAll("#player-rows .swatch").forEach(el=>{
+    const row=+el.dataset.row, av=+el.dataset.av, sel=state.picks[row]&&state.picks[row].av===av;
+    const takenOther=!sel&&taken.has(av);
+    el.classList.toggle("selected",sel); el.classList.toggle("taken",takenOther);
+    el.setAttribute("tabindex",takenOther?"-1":"0");
   });
-  c.segments.splice(c.segments.indexOf(c.active), 1, ...pieces);
-  c.active = null;
-  renderRollOff();
-  if (c.segments.some(s => !s.player)) setTimeout(startRollOffRound, c.reduced ? 0 : 650);
-  else finishRollOff();
 }
+document.getElementById("mode-row").addEventListener("click",e=>{const b=e.target.closest("button[data-mode]");if(b){state.mode=b.dataset.mode;renderSetup();}});
+document.getElementById("submode-row").addEventListener("click",e=>{const b=e.target.closest("button[data-sub]");if(b){state.submode=b.dataset.sub;renderSetup();}});
+document.getElementById("count-row").addEventListener("click",e=>{const b=e.target.closest("button[data-n]");if(b){state.count=+b.dataset.n;renderSetup();}});
+document.getElementById("player-rows").addEventListener("click",e=>{const sw=e.target.closest(".swatch");if(!sw||sw.classList.contains("taken"))return;const row=+sw.dataset.row;state.picks[row]={...state.picks[row],av:+sw.dataset.av};refreshSwatches();});
+document.getElementById("player-rows").addEventListener("keydown",e=>{const sw=e.target.closest&&e.target.closest(".swatch");if(sw&&(e.key==="Enter"||e.key===" ")){e.preventDefault();sw.click();}});
+document.getElementById("player-rows").addEventListener("input",e=>{if(e.target.tagName==="INPUT"){state.picks[+e.target.dataset.idx].name=e.target.value;}});
 
-function finishRollOff() {
-  const c = state.ceremony; if (!c) return;
-  c.ordered = c.segments.map(s => s.player);
-  c.done = true;
-  renderRollOff();
-  document.getElementById("rolloff-start").focus();
-}
-
-function rollOffStart() {
-  const c = state.ceremony;
-  if (!c || !c.done) return;
-  document.getElementById("rolloff-backdrop").classList.add("hidden");
-  const ordered = c.ordered, rounds = c.rounds;
-  state.ceremony = null;
-  startGame(ordered);
-  logRollOff(rounds, ordered);
-}
-
-function rollOffFlatten() {
-  const out = [];
-  state.ceremony.segments.forEach(seg => {
-    if (seg.player) out.push(seg.player);
-    else seg.players.forEach(p => out.push(p));
-  });
-  return out;
-}
-
-function renderRollOff() {
-  const c = state.ceremony; if (!c) return;
-  document.getElementById("rolloff-title").textContent = t("rolloff_title");
-  const list = document.getElementById("rolloff-list");
-  list.innerHTML = rollOffFlatten().map((p, i) => {
-    const inActive = c.active && c.active.players.indexOf(p) !== -1;
-    const isCurrent = !c.busy && c.active && c.pending[0] === p;
-    const val = inActive ? c.rolls[p.id] : p._rv;
-    const dieHtml = (val !== undefined && val !== null) ? dieFaceHTML(val) : '<span class="ro-dash">—</span>';
-    return `<div class="ro-row${inActive ? " active" : ""}${isCurrent ? " current" : ""}">
-      <span class="ro-rank">${c.done ? (i + 1) : ""}</span>
-      <span class="ro-av" style="background:${p.color.hex}">${p.color.shape}</span>
-      <span class="ro-name">${escapeHtml(p.name)}</span>
-      <span class="ro-die" id="rolloff-die-${p.id}">${dieHtml}</span>
-    </div>`;
-  }).join("");
-  const statusEl = document.getElementById("rolloff-status");
-  const promptEl = document.getElementById("rolloff-prompt");
-  const rollBtn = document.getElementById("rolloff-roll");
-  const startBtn = document.getElementById("rolloff-start");
-  if (c.done) {
-    statusEl.textContent = t("rolloff_done");
-    promptEl.textContent = "";
-    rollBtn.classList.add("hidden");
-    startBtn.classList.remove("hidden");
-    startBtn.textContent = t("rolloff_start");
-  } else {
-    const cur = c.pending[0];
-    statusEl.textContent = c.isTie ? t("rolloff_tie_note") : "";
-    promptEl.textContent = cur ? t("rolloff_prompt", { name: cur.name }) : "";
-    rollBtn.classList.remove("hidden");
-    startBtn.classList.add("hidden");
-    rollBtn.textContent = t("rolloff_roll");
-    rollBtn.disabled = c.busy || !cur;
+document.getElementById("start-btn").addEventListener("click",()=>{
+  if(!state.mode){alert("請先選擇遊玩模式。");return;}
+  if(!state.submode){alert("請先選擇進行方式（關主／對戰）。");return;}
+  const players=[];
+  for(let i=0;i<state.count;i++){
+    const pk=state.picks[i];
+    if(players.some(p=>p.av===pk.av)){alert("有兩位玩家選了相同的角色。");return;}
+    players.push({id:i,name:(pk.name||"").trim()||`玩家 ${i+1}`,av:AVATARS[pk.av],avIdx:pk.av,pos:0,score:0,skipTurns:0});
   }
-}
-
-document.getElementById("rolloff-roll").addEventListener("click", rollOffRollCurrent);
-document.getElementById("rolloff-start").addEventListener("click", rollOffStart);
-document.getElementById("rolloff-backdrop").addEventListener("keydown", e => {
-  if (e.key !== "Enter" && e.key !== " ") return;
-  e.preventDefault();
-  if (state.ceremony && state.ceremony.done) rollOffStart();
-  else rollOffRollCurrent();
+  startGame(players);
 });
 
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-}
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
-// --------- Start game ---------
-function startGame(players) {
-  // Turn order is already decided (dice roll-off in the start handler).
-  state.players = players;
-  state.turnIdx = 0;
-  state.plagueSpent = {};
-  state.log = [];
-  state.busy = false;
-  document.getElementById("setup").style.display = "none";
+// ============================================================
+// Start
+// ============================================================
+async function startGame(players){
+  // simple dice roll-off for turn order (highest first, ties keep order)
+  players.forEach(p=>p._roll=1+Math.floor(Math.random()*6));
+  players.sort((a,b)=>b._roll-a._roll);
+  state.players=players; state.turnIdx=0; state.busy=false; state.log=[];
+  document.getElementById("setup").style.display="none";
   document.getElementById("game").classList.add("active");
   document.getElementById("win-screen").classList.add("hidden");
-  const diceEl = document.getElementById("dice");
-  diceEl.textContent = "🎲";
-  diceEl.removeAttribute("aria-label");
-  renderBoard();
-  renderPlayers();
-  renderLog();
+  document.getElementById("mode-tag").textContent=`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`;
+  const dice=document.getElementById("dice"); dice.textContent="🎲"; dice.removeAttribute("aria-label");
+  renderBoard(); renderPlayers(); renderLog();
+  pushLog(`🎲 出場順序：${players.map(p=>`${p.av.emoji}${p.name}(${p._roll})`).join(" → ")}`);
   updateTurnUI();
+  // Opening: burning bush task for everyone
+  state.busy=true; updateTurnUI();
+  await taskModal(currentPlayer(),BOARD[0],BOARD[0].plan(state.mode,state.submode),{opening:true});
+  state.busy=false; updateTurnUI();
 }
 
-// --------- Board rendering ---------
-// Designer DR-2 (19_designer.md): tile tooltip shows name + flavor; never leaks
-// mechanical effect of un-triggered plagues. Spent plagues do show the effect.
-function tileTooltip(tile) {
-  if (tile.type === "plague") {
-    const p = PLAGUE_DEFS[tile.plague];
-    const title = plagueT(p, "title");
-    if (state.plagueSpent[tile.plague]) {
-      return t("tile_tooltip_plague_spent", { title, effect: plagueT(p, "effect") });
-    }
-    return t("tile_tooltip_plague_active", { title, flavor: plagueT(p, "flavor") });
-  }
-  const label = tileLabel(tile);
-  if (tile.type === "start") return t("tile_tooltip_start", { label });
-  if (tile.type === "goal")  return t("tile_tooltip_goal", { label });
-  return label;
-}
-
-function renderBoard() {
-  const board = document.getElementById("board");
-  board.innerHTML = "";
-  // Draw the winding road first, beneath the tiles.
-  board.insertAdjacentHTML("beforeend", `
-    <svg class="road" viewBox="0 0 860 540" preserveAspectRatio="none" aria-hidden="true">
-      <path class="road-edge" d="${roadPath(POS)}" />
-      <path class="road-base" d="${roadPath(POS)}" />
-      <path class="road-dash" d="${roadPath(POS)}" />
-    </svg>`);
-  BOARD.forEach((tile, i) => {
-    const el = document.createElement("div");
-    el.className = "tile " + (tile.type === "plague" ? "plague" : tile.type);
-    el.dataset.idx = tile.idx;
-    const [cx, cy] = POS[i];
-    el.style.left = cx + "px";
-    el.style.top = cy + "px";
-    let icon, label;
-    if (tile.type === "plague") {
-      const p = PLAGUE_DEFS[tile.plague];
-      icon = p.icon;
-      label = plagueT(p, "title");
-    } else {
-      icon = tile.icon;
-      label = tileLabel(tile);
-    }
-    el.title = tileTooltip(tile);
-    el.setAttribute("aria-label", el.title);
-    el.setAttribute("role", "button");
-    el.setAttribute("tabindex", "0");
-    el.innerHTML = `
-      <span class="idx">${tile.idx}</span>
-      <span class="icon">${icon}</span>
-      <span class="label">${escapeHtml(label)}</span>
-      <div class="tokens" data-idx="${tile.idx}"></div>`;
-    board.appendChild(el);
-  });
-  renderTokens();
-  fitBoard();
-}
-
-// Scale the fixed 860×540 board down to fit its container (mobile/narrow),
-// so the whole winding trail is visible without horizontal scrolling.
-// Desktop keeps scale 1 (pixel-identical to before).
-function fitBoard() {
-  const wrap = document.getElementById("board-wrap");
-  const fit = document.getElementById("board-fit");
-  const board = document.getElementById("board");
-  if (!wrap || !fit || !board) return;
-  const cs = getComputedStyle(wrap);
-  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-  const avail = wrap.clientWidth - padX;
-  if (avail <= 0) return;              // hidden / not laid out yet
-  let s = Math.min(1, avail / 860);
-  // On phones, don't shrink tiles below a comfortable tap size — keep the board
-  // larger and let #board-wrap pan horizontally instead.
-  if (window.matchMedia && window.matchMedia("(max-width: 480px)").matches) {
-    s = Math.max(s, 0.6);             // ~42px tiles
-  }
-  board.style.transform = s < 1 ? `scale(${s})` : "none";
-  fit.style.width = (860 * s) + "px";
-  fit.style.height = (540 * s) + "px";
-}
-window.addEventListener("resize", fitBoard);
-
-// Build a smooth SVG path through the tile centres (Catmull-Rom → cubic Bézier),
-// so the trail curves organically between the hand-placed points.
-function roadPath(pts) {
-  if (pts.length < 2) return "";
-  let d = `M ${pts[0][0]} ${pts[0][1]}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] || p2;
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
-    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
-    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0]} ${p2[1]}`;
+// ============================================================
+// Board
+// ============================================================
+function roadPath(pts){
+  if(pts.length<2)return"";
+  let d=`M ${pts[0][0]} ${pts[0][1]}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=` C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0]} ${p2[1]}`;
   }
   return d;
 }
-
-function renderTokens() {
-  document.querySelectorAll(".tokens").forEach(el => el.innerHTML = "");
-  // Mark spent plague tiles + refresh tooltip so spent state reveals effect (DR-2).
-  document.querySelectorAll(".tile.plague").forEach(el => {
-    const idx = +el.dataset.idx;
-    const tile = BOARD[idx];
-    el.classList.toggle("spent", !!state.plagueSpent[tile.plague]);
-    el.title = tileTooltip(tile);
-    el.setAttribute("aria-label", el.title);
+function renderBoard(){
+  const board=document.getElementById("board"); board.innerHTML="";
+  board.insertAdjacentHTML("beforeend",`<svg class="road" viewBox="0 0 860 540" preserveAspectRatio="none" aria-hidden="true"><path class="road-edge" d="${roadPath(POS)}"/><path class="road-base" d="${roadPath(POS)}"/><path class="road-dash" d="${roadPath(POS)}"/></svg>`);
+  BOARD.forEach((tile,i)=>{
+    const el=document.createElement("div");
+    el.className="tile "+(tile.cls||"");
+    el.dataset.idx=i; el.style.left=POS[i][0]+"px"; el.style.top=POS[i][1]+"px";
+    el.setAttribute("role","button"); el.setAttribute("tabindex","0");
+    el.title=`${tile.n}. ${tile.name}`;
+    el.innerHTML=`<span class="idx">${tile.n}</span><span class="icon">${tile.icon}</span><span class="label">${escapeHtml(tile.name)}</span><div class="tokens" data-idx="${i}"></div>`;
+    board.appendChild(el);
   });
-  state.players.forEach(p => {
-    const slot = document.querySelector(`.tokens[data-idx="${p.pos}"]`);
-    if (!slot) return;
-    const tok = document.createElement("div");
-    tok.className = "token";
-    tok.style.background = p.color.hex;
-    tok.textContent = p.color.shape;
-    tok.title = p.name;
-    slot.appendChild(tok);
-  });
-  // current player tile highlight
-  document.querySelectorAll(".tile").forEach(el => el.classList.remove("current"));
-  const cur = currentPlayer();
-  if (cur) {
-    const t = document.querySelector(`.tile[data-idx="${cur.pos}"]`);
-    if (t) t.classList.add("current");
-  }
+  renderTokens(); fitBoard();
 }
-
-// --------- Players panel ---------
-function renderPlayers() {
-  const list = document.getElementById("players-list");
-  list.innerHTML = "";
-  state.players.forEach((p, i) => {
-    const card = document.createElement("div");
-    card.className = "player-card" + (i === state.turnIdx ? " active" : "") + (p.skipTurns > 0 ? " skipping" : "");
-    const stats = t("player_stats", { faith: p.faith, pos: p.pos })
-      + (p.skipTurns > 0 ? t("player_skip_suffix", { n: p.skipTurns }) : "");
-    const invHtml = (p.items && p.items.length)
-      ? `<span class="inv">` + p.items.map(id =>
-          `<span class="item-chip" title="${escapeHtml(t(ITEMS[id].nameKey))}">${ITEMS[id].icon}</span>`).join("") + `</span>`
-      : "";
-    card.dataset.pid = p.id;
-    card.setAttribute("role", "button");
-    card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", `${p.name} — ${stats}`);
-    card.innerHTML = `
-      <div class="swatch-small" style="background:${p.color.hex}">${p.color.shape}</div>
-      <div class="info">
-        <div class="name">${escapeHtml(p.name)}</div>
-        <div class="stats">${escapeHtml(stats)}${invHtml}</div>
-      </div>`;
+function fitBoard(){
+  const wrap=document.getElementById("board-wrap"),fit=document.getElementById("board-fit"),board=document.getElementById("board");
+  if(!wrap||!fit||!board)return;
+  const cs=getComputedStyle(wrap),avail=wrap.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  if(avail<=0)return;
+  let s=Math.min(1,avail/860);
+  if(window.matchMedia&&window.matchMedia("(max-width:480px)").matches)s=Math.max(s,0.6);
+  board.style.transform=s<1?`scale(${s})`:"none"; fit.style.width=(860*s)+"px"; fit.style.height=(540*s)+"px";
+}
+window.addEventListener("resize",fitBoard);
+function renderTokens(){
+  document.querySelectorAll(".tokens").forEach(el=>el.innerHTML="");
+  state.players.forEach(p=>{
+    const slot=document.querySelector(`.tokens[data-idx="${p.pos}"]`); if(!slot)return;
+    const tok=document.createElement("div"); tok.className="token"; tok.style.background=p.av.hex; tok.textContent=p.av.emoji; tok.title=p.name; slot.appendChild(tok);
+  });
+  document.querySelectorAll(".tile").forEach(el=>el.classList.remove("current"));
+  const cur=currentPlayer(); if(cur){const t=document.querySelector(`.tile[data-idx="${cur.pos}"]`); if(t)t.classList.add("current");}
+}
+function renderPlayers(){
+  const list=document.getElementById("players-list"); list.innerHTML="";
+  state.players.forEach((p,i)=>{
+    const card=document.createElement("div");
+    card.className="player-card"+(i===state.turnIdx?" active":"")+(p.skipTurns>0?" skipping":"");
+    card.dataset.pid=p.id; card.setAttribute("role","button"); card.setAttribute("tabindex","0");
+    const tile=BOARD[p.pos];
+    card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站 · ⭐ ${p.score}${p.skipTurns>0?` · 💤×${p.skipTurns}`:""}</div></div>`;
     list.appendChild(card);
   });
 }
+document.getElementById("players-list").addEventListener("click",e=>{const c=e.target.closest(".player-card");if(c)openInfoPlayer(+c.dataset.pid);});
+document.getElementById("board").addEventListener("click",e=>{const t=e.target.closest(".tile");if(t)openInfoTile(+t.dataset.idx);});
+document.getElementById("board").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const t=e.target.closest(".tile");if(t){e.preventDefault();openInfoTile(+t.dataset.idx);}});
 
-// --------- Log ---------
-// Entries store i18n key + params (not the rendered string) so historical
-// log lines re-translate when the user toggles language. Params that depend
-// on the current language (plague title/short) are resolved at render time
-// via the plagueId carried in params.
-function pushLog(key, params, cls) {
-  state.log.unshift({ key, params: params || null, cls });
-  if (state.log.length > 30) state.log.pop();
-  renderLog();
+// ============================================================
+// Log / turn
+// ============================================================
+function pushLog(msg,cls){state.log.unshift({msg,cls});if(state.log.length>40)state.log.pop();renderLog();}
+function renderLog(){document.getElementById("log").innerHTML=state.log.slice(0,12).map(e=>`<div class="entry ${e.cls||""}">${escapeHtml(e.msg)}</div>`).join("");}
+function currentPlayer(){return state.players[state.turnIdx];}
+function updateTurnUI(){
+  renderPlayers(); renderTokens();
+  const p=currentPlayer();
+  document.getElementById("turn-name").textContent=p?`輪到 ${p.av.emoji} ${p.name}`:"—";
+  document.getElementById("roll-btn").disabled=state.busy;
 }
-function resolveLogEntry(e) {
-  if (!e.params) return t(e.key);
-  let params = e.params;
-  if (params.plagueId) {
-    const plague = PLAGUE_DEFS[params.plagueId];
-    if (plague) {
-      const fullTitle = plagueT(plague, "title");
-      params = { ...params, title: fullTitle, short: fullTitle.replace(/^\d+\.\s*/, "") };
-    }
-  }
-  // B-2: resolve player names at render time so default names ("Player N" /
-  // "玩家 N") in historical log entries follow the current language.
-  if (params.playerId !== undefined) {
-    const p = state.players.find(pl => pl.id === params.playerId);
-    if (p) params = { ...params, name: p.name };
-  }
-  if (params.playerIds) {
-    const order = params.playerIds
-      .map(id => (state.players.find(pl => pl.id === id) || {}).name || "?")
-      .join(" → ");
-    params = { ...params, order };
-  }
-  return t(e.key, params);
-}
-function renderLog() {
-  const el = document.getElementById("log");
-  el.innerHTML = state.log.slice(0, 10).map(e =>
-    `<div class="entry ${e.cls || ""}">${escapeHtml(resolveLogEntry(e))}</div>`).join("");
-}
+function advanceTurn(){state.turnIdx=(state.turnIdx+1)%state.players.length;updateTurnUI();}
 
-// --------- Turn UI ---------
-function currentPlayer() { return state.players[state.turnIdx]; }
+// ============================================================
+// Dice
+// ============================================================
+const PIP={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function dieFaceHTML(v){const on=new Set(PIP[v]||[]),red=(v===1||v===4),cls="pip"+(red?" red":"")+(v===1?" big":"");let c="";for(let i=0;i<9;i++)c+=`<span class="cell">${on.has(i)?`<span class="${cls}"></span>`:""}</span>`;return`<span class="die-face">${c}</span>`;}
+function renderDie(v){const el=document.getElementById("dice");if(el){el.innerHTML=dieFaceHTML(v);el.setAttribute("aria-label",String(v));}}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-function updateTurnUI() {
-  renderPlayers();
-  renderTokens();
-  const p = currentPlayer();
-  document.getElementById("current-turn-name").textContent = p ? t("sidebar_turn", { name: p.name }) : t("sidebar_no_turn");
-  document.getElementById("roll-btn").disabled = state.busy;
-}
-
-// --------- Roll & move ---------
-document.getElementById("roll-btn").addEventListener("click", onRoll);
-
-document.addEventListener("keydown", e => {
-  if (e.key !== "Enter") return;
-  // Modal / win-screen Enter must work even while state.busy is true
-  // (onRoll sets busy before awaiting the plague modal).
-  if (!document.getElementById("modal-backdrop").classList.contains("hidden")) {
-    document.getElementById("modal-continue").click();
-    return;
-  }
-  if (!document.getElementById("win-screen").classList.contains("hidden")) {
-    document.getElementById("play-again-btn").click();
-    return;
-  }
-  if (!state.busy && document.getElementById("game").classList.contains("active")) {
-    onRoll();
-  }
+// ============================================================
+// Roll & move
+// ============================================================
+document.getElementById("roll-btn").addEventListener("click",onRoll);
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  if(!document.getElementById("task-backdrop").classList.contains("hidden"))return;
+  if(!document.getElementById("info-backdrop").classList.contains("hidden")){document.getElementById("info-close").click();return;}
+  if(!document.getElementById("win-screen").classList.contains("hidden")){document.getElementById("play-again-btn").click();return;}
+  if(!state.busy&&document.getElementById("game").classList.contains("active"))onRoll();
 });
 
-async function onRoll() {
-  if (state.busy) return;
-  const p = currentPlayer();
-  if (!p) return;
+async function onRoll(){
+  if(state.busy)return;
+  const p=currentPlayer(); if(!p)return;
+  if(p.skipTurns>0){pushLog(`💤 ${p.name} 暫停，跳過這一輪。`);p.skipTurns-=1;advanceTurn();return;}
+  state.busy=true; updateTurnUI();
+  const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dice=document.getElementById("dice"); dice.classList.add("rolling");
+  if(!reduced){for(let i=0;i<6;i++){renderDie(1+Math.floor(Math.random()*6));await sleep(55);}}
+  const roll=1+Math.floor(Math.random()*6); renderDie(roll); dice.classList.remove("rolling");
+  pushLog(`🎲 ${p.name} 擲出了 ${roll} 點。`);
+  await movePlayer(p,roll);
+  if(p.pos>=GOAL_IDX){state.busy=false;return win(p);}
+  await resolveTile(p);
+  if(p.pos>=GOAL_IDX){state.busy=false;return win(p);}
+  state.busy=false; advanceTurn();
+}
 
-  // Skip-turn handling
-  if (p.skipTurns > 0) {
-    pushLog("log_rest_skip", { playerId: p.id });
-    p.skipTurns -= 1;
-    advanceTurn();
-    return;
-  }
-
-  state.busy = true;
-  updateTurnUI();
-
-  // Dice animation (gated on reduced-motion: CSS @media only covers
-  // CSS animation/transition, not JS setTimeout-driven flicker — R-02)
-  const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const diceEl = document.getElementById("dice");
-  diceEl.classList.add("rolling");
-  if (!reducedMotion) {
-    for (let i = 0; i < 6; i++) {
-      renderDie(1 + Math.floor(Math.random() * 6));
-      await sleep(60);
-    }
-  }
-  const roll = 1 + Math.floor(Math.random() * 6);
-  renderDie(roll);
-  diceEl.classList.remove("rolling");
-  pushLog("log_rolled", { playerId: p.id, n: roll });
-
-  // Move tile-by-tile. You must land EXACTLY on the goal (29); overshooting
-  // bounces back off the goal by the surplus (aeroplane-chess style).
-  const needed = 29 - p.pos;
-  const overshoot = Math.max(0, roll - needed);
-  const target = Math.min(p.pos + roll, 29);
-  const stepDelay = reducedMotion ? 0 : 140;
-  while (p.pos < target) {
-    p.pos += 1;
-    renderTokens();
-    if (stepDelay) await sleep(stepDelay);
-  }
-  if (overshoot > 0) {
-    if (stepDelay) await sleep(stepDelay * 2);   // pause at the goal before rebounding
-    let back = overshoot;
-    while (back > 0) {
-      p.pos -= 1;
-      back -= 1;
-      renderTokens();
-      if (stepDelay) await sleep(stepDelay);
-    }
-    pushLog("log_overshoot", { playerId: p.id, n: overshoot });
+// Move with exact-roll finish: overshoot rebounds off the goal.
+async function movePlayer(p,roll){
+  const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const step=reduced?0:130;
+  const needed=GOAL_IDX-p.pos, overshoot=Math.max(0,roll-needed), target=Math.min(p.pos+roll,GOAL_IDX);
+  while(p.pos<target){p.pos++;renderTokens();if(step)await sleep(step);}
+  if(overshoot>0){
+    if(step)await sleep(step*2);
+    let back=overshoot; while(back>0){p.pos--;back--;renderTokens();if(step)await sleep(step);}
+    pushLog(`🛬 ${p.name} 衝過頭，反彈退回 ${overshoot} 步。`);
   }
   renderPlayers();
-
-  // Win only on an exact landing (overshoot rebounded away above).
-  if (p.pos >= 29) {
-    pushLog("log_reached_goal", { playerId: p.id });
-    state.busy = false;
-    showWin(p);
-    return;
-  }
-
-  // Resolve landing
-  await resolveTile(p);
-
-  // Win check (effect could push past goal? we cap at 29)
-  if (p.pos >= 29) {
-    pushLog("log_reached_goal", { playerId: p.id });
-    state.busy = false;
-    showWin(p);
-    return;
-  }
-
-  state.busy = false;
-  advanceTurn();
+}
+function applyMove(p,steps){
+  const needed=GOAL_IDX-p.pos;
+  if(steps>needed){const over=steps-needed;p.pos=Math.max(0,GOAL_IDX-over);}
+  else p.pos=Math.max(0,p.pos+steps);
+  renderTokens();renderPlayers();
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// Render the dice as a real die face (pips) for the given value 1–6.
-const PIP_MAP = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-function dieFaceHTML(v) {
-  const on = new Set(PIP_MAP[v] || []);
-  const red = (v === 1 || v === 4);              // 1 & 4 are red on a real die
-  const pipCls = "pip" + (red ? " red" : "") + (v === 1 ? " big" : "");
-  let cells = "";
-  for (let i = 0; i < 9; i++) cells += `<span class="cell">${on.has(i) ? `<span class="${pipCls}"></span>` : ""}</span>`;
-  return `<span class="die-face">${cells}</span>`;
-}
-function renderDie(v) {
-  const diceEl = document.getElementById("dice");
-  if (!diceEl) return;
-  diceEl.innerHTML = dieFaceHTML(v);
-  diceEl.setAttribute("aria-label", String(v));
-}
-// Spin a die element through random faces, then settle on finalV.
-async function animateDieInto(el, finalV) {
-  if (!el) return;
-  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!reduced) {
-    for (let i = 0; i < 6; i++) { el.innerHTML = dieFaceHTML(1 + Math.floor(Math.random() * 6)); await sleep(55); }
-  }
-  el.innerHTML = dieFaceHTML(finalV);
+// ============================================================
+// Tile / task resolution
+// ============================================================
+async function resolveTile(p){
+  const tile=BOARD[p.pos];
+  await taskModal(p,tile,tile.plan(state.mode,state.submode));
 }
 
-// --------- Tile resolution ---------
-async function resolveTile(p) {
-  const tile = BOARD[p.pos];
-  if (tile.type === "start" || tile.type === "path" || tile.type === "goal") {
-    return;
-  }
-  if (tile.type === "rest") {
-    if (p.skipTurns > 0) {
-      p.skipTurns -= 1;
-      pushLog("log_rest_heal", { playerId: p.id });
-    } else {
-      p.faith += 1;
-      pushLog("log_rest_renew", { playerId: p.id });
+function taskModal(p,tile,plan,opts){
+  opts=opts||{};
+  return new Promise(resolve=>{
+    state.taskPlan={p,tile,plan};
+    document.getElementById("task-icon").textContent=tile.icon;
+    document.getElementById("task-title").textContent=`${tile.n}. ${tile.name}`;
+    document.getElementById("task-sub").textContent=(tile.sub?tile.sub+" · ":"")+`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`;
+    document.getElementById("task-text").textContent=plan.text;
+    const back=document.getElementById("task-backdrop");
+    const controls=document.getElementById("task-controls"); controls.innerHTML="";
+    back.classList.remove("hidden");
+    const done=()=>{back.classList.add("hidden");controls.innerHTML="";state.taskPlan=null;resolve();};
+    const btn=(label,cls,fn)=>{const b=document.createElement("button");b.className=cls||"good";b.textContent=label;b.addEventListener("click",fn);controls.appendChild(b);return b;};
+
+    const kind=plan.kind;
+    if(kind==="start"){ btn(opts.opening?"全體脫鞋，出發！":"繼續","good",done); }
+    else if(kind==="info"||kind==="maintain"){ btn("完成","good",done); }
+    else if(kind==="safe"){ btn("平安通過 →","good",done); }
+    else if(kind==="goal"){ btn("🎉 抵達終點","good",done); }
+    else if(kind==="move"){
+      btn(`後退 ${Math.abs(plan.steps)} 格`,"warn",()=>{applyMove(p,plan.steps);pushLog(`🚫 ${p.name} ${plan.steps<0?"後退":"前進"} ${Math.abs(plan.steps)} 格。`);done();});
     }
-    renderPlayers();
-    return;
-  }
-  if (tile.type === "miracle") {
-    if (!hasItem(p, "staff")) {
-      addItem(p, "staff");
-      pushLog("log_miracle_get", { playerId: p.id });
-    } else if (!hasItem(p, "charm")) {
-      addItem(p, "charm");
-      pushLog("log_miracle_charm", { playerId: p.id });
-    } else {
-      p.faith += 2;
-      pushLog("log_miracle_extra", { playerId: p.id });
+    else if(kind==="skip"){
+      btn("接受（暫停一輪）","warn",()=>{p.skipTurns+=plan.turns;pushLog(`💤 ${p.name} 將暫停 ${plan.turns} 輪。`);renderPlayers();done();});
     }
-    renderPlayers();
-    return;
-  }
-  if (tile.type === "manna") {
-    p.faith += 1;
-    pushLog("log_gathered_manna", { playerId: p.id });
-    renderPlayers();
-    return;
-  }
-  if (tile.type === "edict") {
-    if (p.faith > 0) {
-      p.faith -= 1;
-      pushLog("log_tax_paid", { playerId: p.id });
-    } else {
-      const before = p.pos;
-      p.pos = Math.max(0, p.pos - 2);
-      pushLog("log_tax_pushback", { playerId: p.id, n: before - p.pos });
-      renderTokens();
+    else if(kind==="penalty"){
+      btn("抽出受罰者","warn",()=>{
+        const victim=state.players[Math.floor(Math.random()*state.players.length)];
+        victim.score-=1; pushLog(`🏇 追兵抓到了 ${victim.av.emoji}${victim.name}，扣 1 分。`);renderPlayers();
+        controls.innerHTML=""; document.getElementById("task-text").textContent=`被抓到的是 ${victim.av.emoji}${victim.name}，扣 1 分。`;
+        btn("繼續","good",done);
+      });
     }
-    renderPlayers();
-    return;
-  }
-  if (tile.type === "plague") {
-    const plague = PLAGUE_DEFS[tile.plague];
-    if (state.plagueSpent[plague.id]) {
-      pushLog("log_old_plague", { playerId: p.id, plagueId: plague.id });
-      return;
+    else if(kind==="advance"){
+      btn("前進一格並挑戰","good",async()=>{back.classList.add("hidden");controls.innerHTML="";
+        if(p.pos<GOAL_IDX){p.pos++;renderTokens();renderPlayers();pushLog(`🦗 ${p.name} 選擇前進一格。`);
+          if(p.pos>=GOAL_IDX){state.taskPlan=null;resolve();return;}
+          await resolveTile(p);}
+        state.taskPlan=null;resolve();});
+      btn("留在原地","ghost",done);
     }
-    state.plagueSpent[plague.id] = true;
-    pushLog("log_plague_fires", { playerId: p.id, plagueId: plague.id }, "plague");
-    renderTokens();
-    const action = await showModal(plague, p);
-    if (action === "staff") {
-      removeItem(p, "staff");
-      pushLog("log_staff_negate", { playerId: p.id, plagueId: plague.id });
-    } else if (action === "charm") {
-      removeItem(p, "charm");
-      pushLog("log_charm_negate", { playerId: p.id, plagueId: plague.id });
-    } else if (action === "mitigate") {
-      const cost = plague.mitigate.cost;
-      p.faith = Math.max(0, p.faith - cost);
-      pushLog("log_faith_weather", { playerId: p.id, plagueId: plague.id, cost });
-      if (plague.id === "hail") {
-        // You shelter, but the storm still scatters everyone else behind the line.
-        const cutoff = p.pos;
-        state.players.forEach(o => { if (o.id !== p.id && o.pos <= cutoff) o.pos = Math.max(0, o.pos - 3); });
-        pushLog("log_hail_others", { cutoff });
+    else if(kind==="chance"){
+      btn("🎴 抽卡","good",async()=>{
+        const card=1+Math.floor(Math.random()*7); // 1-6 advance, 7 skip
+        controls.innerHTML="";
+        if(card===7){document.getElementById("task-text").textContent="抽到「暫停一輪」。";p.skipTurns+=1;renderPlayers();pushLog(`🎴 ${p.name} 抽到暫停一輪。`);btn("接受","warn",done);}
+        else{
+          document.getElementById("task-text").textContent=`抽到「前進 ${card} 步」，並執行抵達格子的任務。`;
+          pushLog(`🎴 ${p.name} 抽到前進 ${card} 步。`);
+          btn("前進並執行","good",async()=>{back.classList.add("hidden");controls.innerHTML="";
+            applyMove(p,card);
+            if(p.pos>=GOAL_IDX){state.taskPlan=null;resolve();return;}
+            await resolveTile(p);
+            state.taskPlan=null;resolve();});
+        }
+      });
+    }
+    else if(kind==="versus"){
+      if(state.submode==="host"){
+        btn("完成闖關 ✓","good",()=>{pushLog(`✅ ${p.name} 完成了「${tile.name}」的闖關。`);done();});
+      }else{
+        const others=state.players.filter(o=>o.id!==p.id);
+        document.getElementById("task-text").textContent=plan.text+"\n\n請選擇對戰的玩家：";
+        const list=document.createElement("div"); list.className="opp-list"; controls.appendChild(list);
+        others.forEach(o=>{
+          const b=document.createElement("button");
+          b.innerHTML=`<span>${o.av.emoji} ${escapeHtml(o.name)}</span><span>第 ${BOARD[o.pos].n} 站</span>`;
+          b.addEventListener("click",()=>chooseOutcome(o)); list.appendChild(b);
+        });
       }
-    } else {
-      applyPlagueEffect(plague, p);
-    }
-    renderPlayers();
-    renderTokens();
-  }
-}
+    }else{ btn("繼續","good",done); }
 
-function applyPlagueEffect(plague, p) {
-  switch (plague.id) {
-    case "blood":
-      p.faith = Math.max(0, p.faith - 1);
-      break;
-    case "frogs":
-      p.pos = Math.max(0, p.pos - 2);
-      break;
-    case "lice":
-      p.skipTurns += 1;
-      break;
-    case "flies":
-      state.players.forEach(o => {
-        if (o.id !== p.id) o.pos = Math.max(0, o.pos - 1);
+    function chooseOutcome(opp){
+      controls.innerHTML="";
+      document.getElementById("task-text").textContent=`你與 ${opp.av.emoji}${opp.name} 對戰「${tile.name}」。結果是？`;
+      btn("我贏了 🏆","good",()=>{
+        pushLog(`🏆 ${p.name} 在「${tile.name}」贏了 ${opp.name}。`);
+        if(plan.swap){
+          controls.innerHTML="";
+          document.getElementById("task-text").textContent=`你贏了！可以選擇是否與 ${opp.av.emoji}${opp.name} 互換格子（換到對方的位置，但不執行該格任務）。`;
+          btn(`與 ${opp.name} 互換格子`,"good",()=>{const tmp=p.pos;p.pos=opp.pos;opp.pos=tmp;renderTokens();renderPlayers();pushLog(`🔄 ${p.name} 與 ${opp.name} 互換了格子。`);done();});
+          btn("留在原地","ghost",done);
+        }else done();
       });
-      pushLog("log_flies_others");
-      break;
-    case "livestock":
-      p.faith = Math.max(0, p.faith - 2);
-      break;
-    case "boils":
-      p.skipTurns += 1;
-      p.faith = Math.max(0, p.faith - 1);
-      break;
-    case "hail": {
-      // Every player at index <= active player's index moves back 3 (active included)
-      const cutoff = p.pos;
-      state.players.forEach(o => {
-        if (o.pos <= cutoff) o.pos = Math.max(0, o.pos - 3);
-      });
-      pushLog("log_hail_sweep", { cutoff });
-      break;
+      btn("我輸了","warn",()=>{pushLog(`💢 ${p.name} 在「${tile.name}」輸給了 ${opp.name}。`);done();});
+      btn("← 重選對手","ghost",()=>taskModal._reopenOpp());
+      taskModal._reopenOpp=()=>{ // re-render opponent list
+        controls.innerHTML=""; document.getElementById("task-text").textContent=plan.text+"\n\n請選擇對戰的玩家：";
+        const list=document.createElement("div"); list.className="opp-list"; controls.appendChild(list);
+        state.players.filter(o=>o.id!==p.id).forEach(o=>{const b=document.createElement("button");b.innerHTML=`<span>${o.av.emoji} ${escapeHtml(o.name)}</span><span>第 ${BOARD[o.pos].n} 站</span>`;b.addEventListener("click",()=>chooseOutcome(o));list.appendChild(b);});
+      };
     }
-    case "locusts":
-      p.faith = 0;
-      break;
-    case "darkness":
-      p.skipTurns += 2;
-      break;
-    case "passover":
-      // 10th plague (death of the firstborn): the player is passed over and
-      // blessed. No forced advance — it sits one step from the goal, so a "+3"
-      // would clash with the exact-roll finish; a Faith blessing is the reward.
-      p.faith += 3;
-      pushLog("log_passover_buff", { playerId: p.id });
-      break;
-  }
-}
-
-// --------- Modal ---------
-// L-2: render modal contents from the current language. Reused by showModal()
-// and setLanguage() so toggling language while the modal is open re-translates
-// title / flavor / effect in place.
-// Rebuild the optional defence buttons (Staff / Faith) for the current player.
-// Wired to state.modalFinish so a language toggle can recreate them mid-modal.
-function buildModalChoices(plague, p) {
-  const choices = document.getElementById("modal-choices");
-  choices.innerHTML = "";
-  const canStaff = !!(p && hasItem(p, "staff") && plague.harmful);
-  const canCharm = !!(p && hasItem(p, "charm") && plague.harmful && plague.faithLoss);
-  const canFaith = !!(p && plague.harmful && plague.mitigate && p.faith >= plague.mitigate.cost);
-  if (canStaff) {
-    const sb = document.createElement("button");
-    sb.id = "modal-staff"; sb.className = "choice-staff";
-    sb.textContent = t("modal_staff_btn");
-    sb.addEventListener("click", () => { if (state.modalFinish) state.modalFinish("staff"); });
-    choices.appendChild(sb);
-  }
-  if (canCharm) {
-    const cb = document.createElement("button");
-    cb.id = "modal-charm"; cb.className = "choice-charm";
-    cb.textContent = t("modal_charm_btn");
-    cb.addEventListener("click", () => { if (state.modalFinish) state.modalFinish("charm"); });
-    choices.appendChild(cb);
-  }
-  if (canFaith) {
-    const fb = document.createElement("button");
-    fb.id = "modal-mitigate"; fb.className = "choice-faith";
-    fb.textContent = t(plague.mitigate.labelKey);
-    fb.addEventListener("click", () => { if (state.modalFinish) state.modalFinish("mitigate"); });
-    choices.appendChild(fb);
-  }
-  // Continue always reads as the generic "proceed / accept full effect" label
-  // (kept as modal_continue so applyStaticI18n + i18n tests stay consistent).
-  document.getElementById("modal-continue").textContent = t("modal_continue");
-}
-
-// L-2: render modal contents from the current language. Reused by showModal()
-// and setLanguage() so toggling language while the modal is open re-translates
-// title / flavor / effect / choices in place.
-function applyModalContent(plague) {
-  document.getElementById("modal-icon").textContent = plague.icon;
-  document.getElementById("modal-title").textContent = plagueT(plague, "title");
-  document.getElementById("modal-flavor").textContent = plagueT(plague, "flavor");
-  document.getElementById("modal-effect").textContent = plagueT(plague, "effect");
-  buildModalChoices(plague, state.modalPlayer);
-}
-
-// Resolves with 'accept' | 'staff' | 'mitigate'. 'accept' (#modal-continue)
-// always applies the plague's full effect — the path the test harness drives.
-function showModal(plague, p) {
-  return new Promise(resolve => {
-    state.modalPlague = plague;
-    state.modalPlayer = p || null;
-    const backdrop = document.getElementById("modal-backdrop");
-    const cont = document.getElementById("modal-continue");
-    const previouslyFocused = document.activeElement;
-    let settled = false;
-
-    function finish(action) {
-      if (settled) return;
-      settled = true;
-      cont.removeEventListener("click", onAccept);
-      backdrop.removeEventListener("keydown", trapHandler);
-      backdrop.classList.add("hidden");
-      document.getElementById("modal-choices").innerHTML = "";
-      state.modalPlague = null;
-      state.modalPlayer = null;
-      state.modalFinish = null;
-      // Restore focus to whatever was active before, falling back to Roll.
-      const meaningful = previouslyFocused
-        && previouslyFocused !== document.body
-        && previouslyFocused !== document.documentElement
-        && document.contains(previouslyFocused)
-        && typeof previouslyFocused.focus === "function";
-      const restoreTarget = meaningful ? previouslyFocused : document.getElementById("roll-btn");
-      if (restoreTarget && typeof restoreTarget.focus === "function") restoreTarget.focus();
-      resolve(action);
-    }
-    state.modalFinish = finish;
-    function onAccept() { finish("accept"); }
-
-    applyModalContent(plague);          // title/flavor/effect + choices + continue text
-    cont.addEventListener("click", onAccept);
-    backdrop.classList.remove("hidden");
-    // R-03: focus the dismiss control so keyboard/SR users land inside the dialog.
-    cont.focus();
-
-    // Focus trap that cycles through every actionable control in the dialog.
-    function trapHandler(e) {
-      if (e.key !== "Tab") return;
-      e.preventDefault();
-      const fs = [...document.getElementById("modal-choices").querySelectorAll("button"), cont];
-      const i = fs.indexOf(document.activeElement);
-      const next = e.shiftKey ? fs[(i - 1 + fs.length) % fs.length] : fs[(i + 1) % fs.length];
-      (next || cont).focus();
-    }
-    backdrop.addEventListener("keydown", trapHandler);
   });
 }
 
-// --------- Turn advance ---------
-function advanceTurn() {
-  state.turnIdx = (state.turnIdx + 1) % state.players.length;
-  updateTurnUI();
+// ============================================================
+// Inspect modals
+// ============================================================
+function openInfo(icon,title,sub,text){
+  document.getElementById("info-icon").textContent=icon;
+  document.getElementById("info-title").textContent=title;
+  document.getElementById("info-sub").textContent=sub||"";
+  document.getElementById("info-text").textContent=text||"";
+  state.infoPrev=document.activeElement;
+  document.getElementById("info-backdrop").classList.remove("hidden");
+  document.getElementById("info-close").focus();
 }
+function openInfoTile(idx){
+  const tile=BOARD[idx]; const plan=tile.plan(state.mode||"soft",state.submode||"vs");
+  openInfo(tile.icon,`${tile.n}. ${tile.name}`,(tile.sub?tile.sub+" · ":"")+`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`,plan.text);
+}
+function openInfoPlayer(pid){
+  const p=state.players.find(x=>x.id===pid); if(!p)return;
+  const tile=BOARD[p.pos];
+  openInfo(p.av.emoji,p.name,`角色：${p.av.name}`,`目前位置：第 ${tile.n} 站「${tile.name}」\n分數：${p.score}\n${p.skipTurns>0?`暫停回合：${p.skipTurns}`:"狀態正常"}`);
+}
+document.getElementById("info-close").addEventListener("click",()=>{
+  document.getElementById("info-backdrop").classList.add("hidden");
+  const pv=state.infoPrev; state.infoPrev=null; if(pv&&document.contains(pv)&&pv.focus)pv.focus();
+});
+document.getElementById("info-backdrop").addEventListener("click",e=>{if(e.target.id==="info-backdrop")document.getElementById("info-close").click();});
 
-// --------- Win ---------
-function showWin(winner) {
-  state.lastWinner = winner;
-  refreshWinScreen();
+// ============================================================
+// Win
+// ============================================================
+function win(winner){
+  pushLog(`🌟 ${winner.av.emoji}${winner.name} 抵達終點，向耶和華歌唱！`,"hi");
+  document.getElementById("winner-name").textContent=`${winner.av.emoji} ${winner.name}`;
+  const sorted=[...state.players].sort((a,b)=>{if(a.id===winner.id)return -1;if(b.id===winner.id)return 1;if(b.pos!==a.pos)return b.pos-a.pos;return b.score-a.score;});
+  document.getElementById("standings").innerHTML=sorted.map((p,i)=>`<div class="row"><span><strong>${i+1}.</strong> ${p.av.emoji} ${escapeHtml(p.name)}</span><span>第 ${BOARD[p.pos].n} 站 · ⭐ ${p.score}</span></div>`).join("");
   document.getElementById("win-screen").classList.remove("hidden");
 }
 
-function refreshWinScreen() {
-  const winner = state.lastWinner;
-  if (!winner) return;
-  document.getElementById("winner-name").textContent = `${winner.color.shape} ${winner.name}`;
-  // Standings: winner first, then by pos desc, then by faith desc
-  const sorted = [...state.players].sort((a, b) => {
-    if (a.id === winner.id) return -1;
-    if (b.id === winner.id) return 1;
-    if (b.pos !== a.pos) return b.pos - a.pos;
-    return b.faith - a.faith;
-  });
-  const standingsEl = document.getElementById("standings");
-  standingsEl.innerHTML = sorted.map((p, i) => `
-    <div class="row">
-      <span><strong>${i+1}.</strong> ${p.color.shape} ${escapeHtml(p.name)}</span>
-      <span>${escapeHtml(t("win_row", { pos: p.pos, faith: p.faith }))}${(p.items && p.items.length) ? " " + p.items.map(id => ITEMS[id].icon).join("") : ""}</span>
-    </div>`).join("");
-}
-
-// --------- New game / play again ---------
-function backToSetup() {
+// ============================================================
+// New game
+// ============================================================
+function backToSetup(){
   document.getElementById("game").classList.remove("active");
-  document.getElementById("setup").style.display = "block";
+  document.getElementById("setup").style.display="block";
   document.getElementById("win-screen").classList.add("hidden");
-  document.getElementById("modal-backdrop").classList.add("hidden");
-  document.getElementById("modal-choices").innerHTML = "";
+  document.getElementById("task-backdrop").classList.add("hidden");
   document.getElementById("info-backdrop").classList.add("hidden");
-  state.modalPlague = null;
-  state.modalPlayer = null;
-  state.modalFinish = null;
-  state.infoPrevFocus = null;
-  // preserve setupSelectedColors (FR-18)
+  state.busy=false; state.taskPlan=null;
   renderSetup();
 }
-
-document.getElementById("new-game-btn").addEventListener("click", () => {
-  if (confirm(t("confirm_new_game"))) backToSetup();
-});
-document.getElementById("play-again-btn").addEventListener("click", backToSetup);
+document.getElementById("new-game-btn").addEventListener("click",()=>{if(confirm("要放棄這一局並回到設定畫面嗎？"))backToSetup();});
+document.getElementById("play-again-btn").addEventListener("click",backToSetup);
 
 // ============================================================
-// Info / inspect modal — click any tile or player for full details.
-// Read-only and separate from the plague-resolution modal.
+// Init
 // ============================================================
-function openInfoModal(icon, title, bodyHtml) {
-  document.getElementById("info-icon").textContent = icon || "ℹ️";
-  document.getElementById("info-title").textContent = title || "";
-  document.getElementById("info-body").innerHTML = bodyHtml || "";
-  const backdrop = document.getElementById("info-backdrop");
-  state.infoPrevFocus = document.activeElement;
-  backdrop.classList.remove("hidden");
-  document.getElementById("info-close").focus();
-}
-function closeInfoModal() {
-  const backdrop = document.getElementById("info-backdrop");
-  if (backdrop.classList.contains("hidden")) return;
-  backdrop.classList.add("hidden");
-  state.infoContext = null;
-  const prev = state.infoPrevFocus;
-  state.infoPrevFocus = null;
-  if (prev && document.contains(prev) && typeof prev.focus === "function") prev.focus();
-}
-
-// Build the detail body for a board tile.
-function tileInfoBody(tile) {
-  if (tile.type === "plague") {
-    const plague = PLAGUE_DEFS[tile.plague];
-    const spent = !!state.plagueSpent[tile.plague];
-    let html = `<div class="row">${escapeHtml(plagueT(plague, "flavor"))}</div>`;
-    html += `<div class="effect">${escapeHtml(plagueT(plague, "effect"))}</div>`;
-    if (spent) {
-      html += `<div class="row spent">${escapeHtml(t("detail_plague_spent"))}</div>`;
-    } else if (plague.harmful) {
-      const defences = [];
-      defences.push(`<li>${escapeHtml(t("detail_defence_staff"))}</li>`);
-      if (plague.faithLoss) defences.push(`<li>${escapeHtml(t("detail_defence_charm"))}</li>`);
-      if (plague.mitigate) defences.push(`<li>${escapeHtml(t("detail_defence_faith", { cost: plague.mitigate.cost }))}</li>`);
-      defences.push(`<li>${escapeHtml(t("detail_defence_accept"))}</li>`);
-      html += `<div class="section-title">${escapeHtml(t("detail_defence_title"))}</div>`;
-      html += `<ul class="defence-list">${defences.join("")}</ul>`;
-    }
-    return html;
-  }
-  const key = "detail_desc_" + (tile.type === "start" ? "start" : tile.type);
-  return `<div class="row">${escapeHtml(t(key))}</div>`;
-}
-function tileInfoTitle(tile) {
-  if (tile.type === "plague") return plagueT(PLAGUE_DEFS[tile.plague], "title");
-  return tileLabel(tile);
-}
-function tileInfoIcon(tile) {
-  return tile.type === "plague" ? PLAGUE_DEFS[tile.plague].icon : tile.icon;
-}
-function openTileInfo(idx) {
-  const tile = BOARD[idx];
-  if (!tile) return;
-  state.infoContext = { kind: "tile", idx };
-  openInfoModal(tileInfoIcon(tile), tileInfoTitle(tile), tileInfoBody(tile));
-}
-
-// Build the detail body for a player.
-function playerInfoBody(p) {
-  const isTurn = state.players[state.turnIdx] && state.players[state.turnIdx].id === p.id;
-  let html = "";
-  html += `<div class="row">${escapeHtml(t("detail_faith", { faith: p.faith }))}</div>`;
-  html += `<div class="row">${escapeHtml(t("detail_pos", { pos: p.pos }))}</div>`;
-  if (p.skipTurns > 0) html += `<div class="row">${escapeHtml(t("detail_skip", { n: p.skipTurns }))}</div>`;
-  if (isTurn) html += `<div class="row">${escapeHtml(t("detail_turn_now"))}</div>`;
-  html += `<div class="section-title">${escapeHtml(t("detail_items_title"))}</div>`;
-  if (p.items && p.items.length) {
-    html += p.items.map(id =>
-      `<div class="item-line"><span class="ic">${ITEMS[id].icon}</span><span><strong>${escapeHtml(t(ITEMS[id].nameKey))}</strong><br>${escapeHtml(t(ITEMS[id].descKey))}</span></div>`
-    ).join("");
-  } else {
-    html += `<div class="row">${escapeHtml(t("info_items_none"))}</div>`;
-  }
-  return html;
-}
-function openPlayerInfo(pid) {
-  const p = state.players.find(pl => pl.id === pid);
-  if (!p) return;
-  state.infoContext = { kind: "player", pid };
-  openInfoModal(p.color.shape, p.name, playerInfoBody(p));
-}
-
-// Re-render the open info modal in the current language (called on toggle).
-function refreshInfoModal() {
-  const c = state.infoContext;
-  if (!c || document.getElementById("info-backdrop").classList.contains("hidden")) return;
-  if (c.kind === "tile") {
-    const tile = BOARD[c.idx];
-    if (tile) {
-      document.getElementById("info-icon").textContent = tileInfoIcon(tile);
-      document.getElementById("info-title").textContent = tileInfoTitle(tile);
-      document.getElementById("info-body").innerHTML = tileInfoBody(tile);
-    }
-  } else if (c.kind === "player") {
-    const p = state.players.find(pl => pl.id === c.pid);
-    if (p) {
-      document.getElementById("info-icon").textContent = p.color.shape;
-      document.getElementById("info-title").textContent = p.name;
-      document.getElementById("info-body").innerHTML = playerInfoBody(p);
-    }
-  }
-}
-
-// Wire up clicks / keyboard for tiles and player cards.
-document.getElementById("board").addEventListener("click", e => {
-  const tileEl = e.target.closest(".tile");
-  if (tileEl && tileEl.dataset.idx !== undefined) openTileInfo(+tileEl.dataset.idx);
-});
-document.getElementById("board").addEventListener("keydown", e => {
-  if (e.key !== "Enter" && e.key !== " ") return;
-  const tileEl = e.target.closest(".tile");
-  if (tileEl && tileEl.dataset.idx !== undefined) { e.preventDefault(); openTileInfo(+tileEl.dataset.idx); }
-});
-document.getElementById("players-list").addEventListener("click", e => {
-  const card = e.target.closest(".player-card");
-  if (card && card.dataset.pid !== undefined) openPlayerInfo(+card.dataset.pid);
-});
-document.getElementById("players-list").addEventListener("keydown", e => {
-  if (e.key !== "Enter" && e.key !== " ") return;
-  const card = e.target.closest(".player-card");
-  if (card && card.dataset.pid !== undefined) { e.preventDefault(); openPlayerInfo(+card.dataset.pid); }
-});
-document.getElementById("info-close").addEventListener("click", closeInfoModal);
-document.getElementById("info-backdrop").addEventListener("click", e => {
-  if (e.target.id === "info-backdrop") closeInfoModal();
-});
-// Esc / Enter close the info modal first, and swallow the key so it can't
-// also roll the dice or dismiss the plague modal underneath.
-document.addEventListener("keydown", e => {
-  if (document.getElementById("info-backdrop").classList.contains("hidden")) return;
-  if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    e.stopPropagation();
-    closeInfoModal();
-  }
-}, true);
-
-// --------- Initial setup ---------
-document.querySelector('#player-count-row button[data-n="2"]').classList.add("active");
-document.documentElement.setAttribute("lang", currentLang === "zh-TW" ? "zh-Hant" : "en");
-applyStaticI18n();
-syncLangSwitchUI();
 renderSetup();
 </script>
-
 </body>
 </html>
