@@ -123,7 +123,7 @@
   .modal .big-icon{font-size:58px;line-height:1;margin:2px 0;}
   .modal h2{font-size:22px;color:var(--nile-deep);margin-bottom:4px;}
   .modal .sub{font-size:12px;font-weight:700;color:var(--dusk);margin-bottom:10px;}
-  .modal .text{font-size:14.5px;line-height:1.6;color:#3a3a4a;text-align:left;margin-bottom:16px;}
+  .modal .text{font-size:14.5px;line-height:1.6;color:#3a3a4a;text-align:left;margin-bottom:16px;white-space:pre-line;}
   .modal .controls{display:flex;flex-direction:column;gap:8px;}
   .modal .controls button{width:100%;font-size:15px;padding:12px 16px;}
   .modal .controls .ghost{background:#fff;border:2px solid #ddd;}
@@ -226,6 +226,7 @@
   <div class="header-bar">
     <h2>🏜️ 出埃及大冒險</h2>
     <span class="mode-tag" id="mode-tag">—</span>
+    <button class="new-game" id="help-btn">❓ 玩法</button>
     <button class="new-game" id="new-game-btn">重新開始</button>
   </div>
   <div id="board-wrap"><div id="board-fit"><div id="board" aria-label="遊戲地圖"></div></div></div>
@@ -710,10 +711,13 @@ function taskModal(p,tile,plan,opts){
 function runMini(key){
   return new Promise(resolve=>{
     const stage=document.getElementById("task-stage"); stage.innerHTML=""; stage.classList.remove("hidden");
-    const fin=r=>{ stage.classList.add("hidden"); stage.innerHTML=""; resolve(typeof r==="number"?{score:r,penalty:0}:{score:r.score||0,penalty:r.penalty||0}); };
+    let cleanup=null, settled=false;
+    const fin=r=>{ if(settled)return; settled=true; if(cleanup){try{cleanup();}catch(e){}} state.miniCleanup=null;
+      stage.classList.add("hidden"); stage.innerHTML="";
+      resolve(typeof r==="number"?{score:r,penalty:0}:{score:(r&&r.score)||0,penalty:(r&&r.penalty)||0}); };
     if(navigator.webdriver && !window.FORCE_MINI){ setTimeout(()=>fin({score:Math.floor(Math.random()*1000),penalty:0}),10); return; }
-    let settled=false;
-    MINIGAMES[key].mount(stage,r=>{ if(settled)return; settled=true; fin(r); });
+    cleanup=MINIGAMES[key].mount(stage,fin)||null;
+    state.miniCleanup=()=>{ if(cleanup){try{cleanup();}catch(e){}} };
   });
 }
 // A simple visible countdown (for timed 大地 tasks). Auto-skips under automation.
@@ -723,7 +727,8 @@ function countdown(stage,secs,label){
     stage.innerHTML=`<div class="mini-timer"><div class="t-num">${secs}</div><div class="t-label">${escapeHtml(label)}</div></div>`;
     if(navigator.webdriver && !window.FORCE_MINI){ stage.classList.add("hidden"); stage.innerHTML=""; return res(); }
     const num=stage.querySelector(".t-num"); let s=secs;
-    const iv=setInterval(()=>{ s--; if(num)num.textContent=Math.max(0,s); if(s<=0){ clearInterval(iv); stage.classList.add("hidden"); stage.innerHTML=""; res(); } },1000);
+    const iv=setInterval(()=>{ s--; if(num)num.textContent=Math.max(0,s); if(s<=0){ clearInterval(iv); state.miniCleanup=null; stage.classList.add("hidden"); stage.innerHTML=""; res(); } },1000);
+    state.miniCleanup=()=>clearInterval(iv);
   });
 }
 function spawnTargets(stage,done,emoji,K,move){
@@ -741,6 +746,7 @@ function spawnTargets(stage,done,emoji,K,move){
   if(move) iv=setInterval(()=>{ tgs.forEach(f=>{ if(f._dead)return;
     f.style.left=Math.max(0,Math.min(W(),parseFloat(f.style.left)+(Math.random()*44-22)))+"px";
     f.style.top=Math.max(0,Math.min(H(),parseFloat(f.style.top)+(Math.random()*44-22)))+"px"; }); },380);
+  return ()=>{ if(iv)clearInterval(iv); };
 }
 const MINIGAMES={
   tap30:{mount(stage,done){
@@ -749,8 +755,8 @@ const MINIGAMES={
     const el=stage.querySelector(".mini-tap"),cnt=el.querySelector(".cnt");
     el.addEventListener("click",()=>{ n++; cnt.textContent=n+" / 30"; if(n>=30)done(Math.max(50,12000-(Date.now()-start))); });
   }},
-  frogs:{mount(stage,done){ spawnTargets(stage,done,"🐸",7,false); }},
-  flies:{mount(stage,done){ spawnTargets(stage,done,"🪰",6,true); }},
+  frogs:{mount(stage,done){ return spawnTargets(stage,done,"🐸",7,false); }},
+  flies:{mount(stage,done){ return spawnTargets(stage,done,"🪰",6,true); }},
   dance:{mount(stage,done){
     const dirs={ArrowUp:"⬆️",ArrowLeft:"⬅️",ArrowDown:"⬇️",ArrowRight:"➡️"};
     const keys=Object.keys(dirs), seq=Array.from({length:8},()=>keys[Math.floor(Math.random()*4)]);
@@ -763,6 +769,7 @@ const MINIGAMES={
       if(i>=seq.length){ document.removeEventListener("keydown",onKey); done(Math.max(50,correct*1500-Math.floor((Date.now()-start)/20))); } else render(); }
     function onKey(e){ if(dirs[e.key]){ e.preventDefault(); hit(e.key); } }
     document.addEventListener("keydown",onKey); render();
+    return ()=>document.removeEventListener("keydown",onKey);
   }},
   typing:{mount(stage,done){
     const phrases=["我們一起走出埃及","耶和華是我的力量","跟著雲柱火柱前行","向耶和華歌唱","脫下鞋來這是聖地"];
@@ -789,6 +796,7 @@ const MINIGAMES={
         else if(a.y>field.clientHeight){ a.dead=true; a.el.remove(); } });
       if(spawned>=N && active.every(a=>a.dead)){ clearInterval(tick); done({score:Math.max(50,2200-hits*260)}); }
     },60);
+    return ()=>{ clearInterval(sp); clearInterval(tick); };
   }},
   rash:{mount(stage,done){
     const K=8; let left=K,start=Date.now();
@@ -800,10 +808,12 @@ const MINIGAMES={
     const rub=e=>{ if(!down)return; const r=field.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
       field.querySelectorAll(".mini-rash").forEach(s=>{ if(s._d)return; const sx=parseFloat(s.style.left)+15,sy=parseFloat(s.style.top)+15;
         if(Math.abs(x-sx)<26&&Math.abs(y-sy)<26){ s._d=true; s.remove(); left--; prog.textContent="按住擦拭消除疹子（剩 "+left+"）"; if(left<=0)done({score:Math.max(50,16000-(Date.now()-start))}); } }); };
+    const up=()=>down=false;
     field.addEventListener("pointerdown",e=>{down=true;rub(e);});
-    document.addEventListener("pointerup",()=>down=false);
+    document.addEventListener("pointerup",up);
     field.addEventListener("pointermove",rub);
     field.addEventListener("click",rub2); function rub2(e){ down=true; rub(e); down=false; } // tap-to-rub fallback
+    return ()=>document.removeEventListener("pointerup",up);
   }},
   trace:{mount(stage,done){
     const W=360,H=160; let errors=0,maxX=0,fin=false;
@@ -821,14 +831,16 @@ const MINIGAMES={
     const sea=stage.querySelector(".mini-sea"),prog=stage.querySelector(".mini-progress");
     function spawn(){ if(people<=0){ done({score:Math.max(50,2000-touches*150),penalty:touches}); return; }
       cur=document.createElement("div"); cur.className="mini-person"; cur.textContent="🧍"; cur.style.left="6px"; cur.style.top=(H/2-15)+"px"; sea.appendChild(cur); }
+    const up=()=>drag=false;
     sea.addEventListener("pointerdown",e=>{ if(e.target===cur)drag=true; });
-    document.addEventListener("pointerup",()=>drag=false);
+    document.addEventListener("pointerup",up);
     sea.addEventListener("pointermove",e=>{ if(!drag||!cur)return; const r=sea.getBoundingClientRect();
       let x=Math.max(0,Math.min(r.width-30,e.clientX-r.left-15)),y=Math.max(0,Math.min(H-30,e.clientY-r.top-15));
       cur.style.left=x+"px"; cur.style.top=y+"px";
       if(y<H*0.26-4||y>H*0.74-26){ if(!cur._t){cur._t=true;touches++;prog.textContent="別碰到海水（已碰 "+touches+" 次）";setTimeout(()=>{if(cur)cur._t=false;},250);} }
       if(x>=r.width-34){ cur.remove(); people--; prog.textContent="剩 "+people+" 人"; cur=null; drag=false; spawn(); } });
     spawn();
+    return ()=>document.removeEventListener("pointerup",up);
   }},
   paint:{mount(stage,done){
     const W=300,H=170,cell=17, cols=Math.floor(W/cell), rows=Math.floor(H/cell);
@@ -840,9 +852,11 @@ const MINIGAMES={
     const target=Math.ceil(need.size*0.85); let painted=0,down=false;
     const paint=e=>{ if(!down)return; const r=box.getBoundingClientRect(),cc=Math.floor((e.clientX-r.left)/cell),rr=Math.floor((e.clientY-r.top)/cell),k=rr+","+cc;
       const el=box.querySelector('[data-k="'+k+'"]'); if(el&&!el._p){ el._p=true; el.style.background="#d12f2f"; painted++; prog.textContent="塗門框（"+painted+" / "+target+"）"; if(painted>=target)done({score:1000}); } };
+    const up=()=>down=false;
     box.addEventListener("pointerdown",e=>{down=true;paint(e);});
-    document.addEventListener("pointerup",()=>down=false);
+    document.addEventListener("pointerup",up);
     box.addEventListener("pointermove",paint);
+    return ()=>document.removeEventListener("pointerup",up);
   }},
   arrange:{mount(stage,done){
     const goal="☁️🧍🔥"; let items; do{ items=shuffle(["☁️","🧍","🔥"]); }while(items.join("")===goal);
@@ -870,6 +884,7 @@ const MINIGAMES={
       b.addEventListener("click",()=>{ if(b._u)return; b._u=true; if(isPalm)score++; else penalty++; upd(); b.remove(); });
       setTimeout(()=>{ if(!b._u){ b._u=true; b.remove(); } },950);
     },680); upd();
+    return ()=>clearInterval(iv);
   }},
 };
 
@@ -932,9 +947,20 @@ function backToSetup(){
   document.getElementById("win-screen").classList.add("hidden");
   document.getElementById("task-backdrop").classList.add("hidden");
   document.getElementById("info-backdrop").classList.add("hidden");
+  if(state.miniCleanup){ try{state.miniCleanup();}catch(e){} state.miniCleanup=null; }
+  const stage=document.getElementById("task-stage"); stage.classList.add("hidden"); stage.innerHTML="";
+  document.getElementById("task-controls").innerHTML="";
   state.busy=false; state.taskPlan=null;
   renderSetup();
 }
+document.getElementById("help-btn").addEventListener("click",()=>{
+  openInfo("📖","玩法說明",MODE_LABEL[state.mode]+" · "+SUB_LABEL[state.submode],
+    "🎯 目標：輪流擲骰前進，最先「剛好」抵達終點（第 26 站）者獲勝；點數超過終點會像飛行棋一樣反彈退回。\n\n"+
+    "🎮 模式：\n• 遊戲軟體模式：在螢幕上玩迷你遊戲。\n• 大地遊戲模式：在實體場地做動作闖關。\n搭配「關主模式」（與電腦比）或「玩家對戰模式」（指定同場玩家對戰）。\n\n"+
+    "⚔️ 對戰格：指定一位玩家比賽，贏的一方可選擇是否與對手互換格子（換到對方位置、但不執行該格任務）。\n\n"+
+    "🎴 機會與命運（法老放行）：抽卡決定前進步數，或暫停一輪。\n🏇 追兵：隨機抽一位玩家扣 1 分。\n🧘 大地維持動作：會在玩家卡顯示「維持中」，輪到你時自動解除。\n\n"+
+    "💡 點任一格可查看該格任務；點玩家卡可查看狀態。");
+});
 document.getElementById("new-game-btn").addEventListener("click",()=>{if(confirm("要放棄這一局並回到設定畫面嗎？"))backToSetup();});
 document.getElementById("play-again-btn").addEventListener("click",backToSetup);
 
