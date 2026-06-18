@@ -158,6 +158,9 @@
   .mini-photo{display:flex;flex-direction:column;align-items:center;gap:8px;}
   .mini-photo .mini-file{font-size:14px;}
   .mini-photo-prev img{max-width:220px;max-height:150px;border-radius:8px;}
+  .mini-timer{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 0;}
+  .mini-timer .t-num{font-size:60px;font-weight:800;color:var(--nile-deep);line-height:1;}
+  .mini-timer .t-label{font-size:15px;font-weight:700;color:var(--dusk);}
 
   /* ---------- Win ---------- */
   #win-screen{position:fixed;inset:0;background:linear-gradient(135deg,#fef6e0,#ffd66a);display:flex;align-items:center;justify-content:center;z-index:200;}
@@ -319,7 +322,7 @@ const TILES=[
   {n:20,name:"雲柱火柱隨行",icon:"☁️",
    plan:(m)=>m==="land"?{kind:"info",text:"兩人三腳走到關主指定地點（此關不對戰）；落單的玩家則向左轉 5 圈、向右轉 5 圈，再跑直線到目的地。"}:{kind:"solo",game:"arrange",text:"把雲柱、火柱與人排成「☁️ 雲 － 🧍 人 － 🔥 火」的順序即可過關（此關不對戰）。"}},
   {n:21,name:"追兵",icon:"🏇",cls:"move",
-   plan:(m)=>({kind:"penalty",text:m==="land"?"法老的追兵來了！限時 15 秒鬼抓人，被抓到的玩家扣 1 分。":"法老的追兵來了！電腦隨機抽中一名玩家扣 1 分。"})},
+   plan:(m)=>({kind:"penalty",timer:m==="land"?15:0,text:m==="land"?"法老的追兵來了！限時 15 秒鬼抓人，被抓到的玩家扣 1 分。":"法老的追兵來了！電腦隨機抽中一名玩家扣 1 分。"})},
   {n:22,name:"紅海分開",icon:"🌊",
    plan:(m)=>m==="land"?{kind:"maintain",text:"紅海分開！做出劈腿的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"solo",game:"redsea",text:"紅海分開！沿著乾路把人們一個個從左拖到右側盡頭，途中不可碰到上下海水（碰到一次扣 1 分，此關不對戰）。"}},
   {n:23,name:"紅海合起來",icon:"🌊",
@@ -409,7 +412,7 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   for(let i=0;i<state.count;i++){
     const pk=state.picks[i];
     if(players.some(p=>p.av===pk.av)){alert("有兩位玩家選了相同的角色。");return;}
-    players.push({id:i,name:(pk.name||"").trim()||`玩家 ${i+1}`,av:AVATARS[pk.av],avIdx:pk.av,pos:0,score:0,skipTurns:0});
+    players.push({id:i,name:(pk.name||"").trim()||`玩家 ${i+1}`,av:AVATARS[pk.av],avIdx:pk.av,pos:0,score:0,skipTurns:0,maintaining:null});
   }
   startGame(players);
 });
@@ -423,7 +426,7 @@ async function startGame(players){
   // simple dice roll-off for turn order (highest first, ties keep order)
   players.forEach(p=>p._roll=1+Math.floor(Math.random()*6));
   players.sort((a,b)=>b._roll-a._roll);
-  state.players=players; state.turnIdx=0; state.busy=false; state.log=[];
+  state.players=players; state.turnIdx=0; state.busy=false; state.log=[]; state.shoesOff=false;
   document.getElementById("setup").style.display="none";
   document.getElementById("game").classList.add("active");
   document.getElementById("win-screen").classList.add("hidden");
@@ -491,7 +494,8 @@ function renderPlayers(){
     card.className="player-card"+(i===state.turnIdx?" active":"")+(p.skipTurns>0?" skipping":"");
     card.dataset.pid=p.id; card.setAttribute("role","button"); card.setAttribute("tabindex","0");
     const tile=BOARD[p.pos];
-    card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站 · ⭐ ${p.score}${p.skipTurns>0?` · 💤×${p.skipTurns}`:""}</div></div>`;
+    const extra=(state.mode==="land"&&state.shoesOff?" · 👣赤腳":"")+(p.maintaining?` · 🧘維持「${escapeHtml(p.maintaining.name)}」`:"");
+    card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站 · ⭐ ${p.score}${p.skipTurns>0?` · 💤×${p.skipTurns}`:""}${extra}</div></div>`;
     list.appendChild(card);
   });
 }
@@ -537,6 +541,7 @@ async function onRoll(){
   if(state.busy)return;
   const p=currentPlayer(); if(!p)return;
   if(p.skipTurns>0){pushLog(`💤 ${p.name} 暫停，跳過這一輪。`);p.skipTurns-=1;advanceTurn();return;}
+  if(p.maintaining){ pushLog(`🧘 ${p.name} 結束了「${p.maintaining.name}」的維持動作。`); p.maintaining=null; }
   state.busy=true; updateTurnUI();
   const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const dice=document.getElementById("dice"); dice.classList.add("rolling");
@@ -639,14 +644,22 @@ function taskModal(p,tile,plan,opts){
       }
 
       // ----- Card kinds -----
-      if(kind==="start"){ await button(opts.opening?"全體脫鞋，出發！":"繼續"); return done(); }
-      if(kind==="info"||kind==="maintain"){ await button("完成"); return done(); }
+      if(kind==="start"){ await button(opts.opening?"全體脫鞋，出發！":"繼續"); if(opts.opening&&state.mode==="land"){state.shoesOff=true;renderPlayers();} return done(); }
+      if(kind==="maintain"){
+        const useTimer=await choice([{label:"⏱ 先計時 20 秒",val:1},{label:"直接開始維持 →",val:0,cls:"good"}]);
+        if(useTimer) await countdown(stage,20,"維持動作中…");
+        p.maintaining={icon:tile.icon,name:tile.name}; renderPlayers();
+        pushLog(`🧘 ${p.name} 維持「${tile.name}」的動作，直到下一輪。`);
+        return done();
+      }
+      if(kind==="info"){ await button("完成"); return done(); }
       if(kind==="safe"){ await button("平安通過 →"); return done(); }
       if(kind==="goal"){ await button("🎉 抵達終點"); return done(); }
       if(kind==="move"){ await button(`後退 ${Math.abs(plan.steps)} 格`,"warn"); applyMove(p,plan.steps); pushLog(`🚫 ${p.name} 後退 ${Math.abs(plan.steps)} 格。`); return done(); }
       if(kind==="skip"){ await button("接受（暫停一輪）","warn"); p.skipTurns+=plan.turns; pushLog(`💤 ${p.name} 將暫停 ${plan.turns} 輪。`); renderPlayers(); return done(); }
       if(kind==="penalty"){
-        await button("抽出受罰者","warn");
+        if(state.mode==="land" && plan.timer){ await button("開始鬼抓人 🏃"); await countdown(stage,plan.timer,"鬼抓人！快跑！"); }
+        else await button("抽出受罰者","warn");
         const v=state.players[Math.floor(Math.random()*state.players.length)];
         v.score-=1; renderPlayers(); pushLog(`🏇 追兵抓到了 ${v.av.emoji}${v.name}，扣 1 分。`);
         setText(`被抓到的是 ${v.av.emoji}${v.name}，扣 1 分。`); await button("繼續"); return done();
@@ -701,6 +714,16 @@ function runMini(key){
     if(navigator.webdriver && !window.FORCE_MINI){ setTimeout(()=>fin({score:Math.floor(Math.random()*1000),penalty:0}),10); return; }
     let settled=false;
     MINIGAMES[key].mount(stage,r=>{ if(settled)return; settled=true; fin(r); });
+  });
+}
+// A simple visible countdown (for timed 大地 tasks). Auto-skips under automation.
+function countdown(stage,secs,label){
+  return new Promise(res=>{
+    stage.classList.remove("hidden");
+    stage.innerHTML=`<div class="mini-timer"><div class="t-num">${secs}</div><div class="t-label">${escapeHtml(label)}</div></div>`;
+    if(navigator.webdriver && !window.FORCE_MINI){ stage.classList.add("hidden"); stage.innerHTML=""; return res(); }
+    const num=stage.querySelector(".t-num"); let s=secs;
+    const iv=setInterval(()=>{ s--; if(num)num.textContent=Math.max(0,s); if(s<=0){ clearInterval(iv); stage.classList.add("hidden"); stage.innerHTML=""; res(); } },1000);
   });
 }
 function spawnTargets(stage,done,emoji,K,move){
@@ -880,7 +903,19 @@ document.getElementById("info-backdrop").addEventListener("click",e=>{if(e.targe
 // ============================================================
 // Win
 // ============================================================
+function playCheer(){
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx)return;
+    const ac=new Ctx(); [523,659,784,1047,1319].forEach((f,i)=>{
+      const o=ac.createOscillator(),g=ac.createGain(); o.type="triangle"; o.frequency.value=f;
+      o.connect(g); g.connect(ac.destination); const t=ac.currentTime+i*0.11;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.18,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.34);
+      o.start(t); o.stop(t+0.36);
+    });
+  }catch(e){}
+}
 function win(winner){
+  playCheer();
   pushLog(`🌟 ${winner.av.emoji}${winner.name} 抵達終點，向耶和華歌唱！`,"hi");
   document.getElementById("winner-name").textContent=`${winner.av.emoji} ${winner.name}`;
   const sorted=[...state.players].sort((a,b)=>{if(a.id===winner.id)return -1;if(b.id===winner.id)return 1;if(b.pos!==a.pos)return b.pos-a.pos;return b.score-a.score;});
