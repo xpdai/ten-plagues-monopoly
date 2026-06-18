@@ -285,7 +285,7 @@ const TILES=[
   {n:0,name:"起點",sub:"出發",icon:"🏁",cls:"start",
    plan:()=>({kind:"info",text:"旅程從這裡開始——擲骰子出發吧！"})},
   {n:1,name:"火燒荊棘",sub:"上帝顯現",icon:"🔥",
-   plan:()=>({kind:"start",text:"上帝在荊棘火焰中向摩西顯現，呼召他帶領百姓出埃及。全體玩家請脫下鞋子和襪子，赤腳直到遊戲結束！"})},
+   plan:(m)=>m==="land"?{kind:"shoes",text:"上帝在荊棘火焰中向摩西顯現，這是聖地。請脫下你的鞋子和襪子，赤腳直到遊戲結束！"}:{kind:"info",text:"上帝在荊棘火焰中向摩西顯現，呼召摩西帶領以色列百姓出埃及。"}},
   {n:2,name:"摩西失守傷害人",icon:"✊",cls:"versus",
    plan:(m,s)=>({kind:"versus",swap:true,text:s==="vs"?"與你指定的玩家猜拳；贏的一方可選擇是否與對方互換格子。":"與關主猜拳，贏了即可過關。"})},
   {n:3,name:"求法老",icon:"🕺",cls:"versus",
@@ -415,7 +415,7 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   for(let i=0;i<state.count;i++){
     const pk=state.picks[i];
     if(players.some(p=>p.av===pk.av)){alert("有兩位玩家選了相同的角色。");return;}
-    players.push({id:i,name:(pk.name||"").trim()||`玩家 ${i+1}`,av:AVATARS[pk.av],avIdx:pk.av,pos:0,score:0,skipTurns:0,maintaining:null});
+    players.push({id:i,name:(pk.name||"").trim()||`玩家 ${i+1}`,av:AVATARS[pk.av],avIdx:pk.av,pos:0,score:0,skipTurns:0,maintaining:null,shoesOff:false});
   }
   startGame(players);
 });
@@ -429,7 +429,7 @@ async function startGame(players){
   // simple dice roll-off for turn order (highest first, ties keep order)
   players.forEach(p=>p._roll=1+Math.floor(Math.random()*6));
   players.sort((a,b)=>b._roll-a._roll);
-  state.players=players; state.turnIdx=0; state.busy=false; state.log=[]; state.shoesOff=false;
+  state.players=players; state.turnIdx=0; state.busy=false; state.log=[];
   document.getElementById("setup").style.display="none";
   document.getElementById("game").classList.add("active");
   document.getElementById("win-screen").classList.add("hidden");
@@ -438,11 +438,6 @@ async function startGame(players){
   renderBoard(); renderPlayers(); renderLog();
   pushLog(`🎲 出場順序：${players.map(p=>`${p.av.emoji}${p.name}(${p._roll})`).join(" → ")}`);
   updateTurnUI();
-  // Opening: the burning-bush calling (脫鞋) for everyone. Players sit on 起點 (0).
-  state.busy=true; updateTurnUI();
-  const fire=BOARD.find(t=>t.name==="火燒荊棘");
-  await taskModal(currentPlayer(),fire,fire.plan(state.mode,state.submode),{opening:true});
-  state.busy=false; updateTurnUI();
 }
 
 // ============================================================
@@ -498,7 +493,7 @@ function renderPlayers(){
     card.className="player-card"+(i===state.turnIdx?" active":"")+(p.skipTurns>0?" skipping":"");
     card.dataset.pid=p.id; card.setAttribute("role","button"); card.setAttribute("tabindex","0");
     const tile=BOARD[p.pos];
-    const extra=(state.shoesOff?" · 👣赤腳":"")+(p.maintaining?` · 🧘維持「${escapeHtml(p.maintaining.name)}」`:"");
+    const extra=(p.shoesOff?" · 👣赤腳":"")+(p.maintaining?` · 🧘維持「${escapeHtml(p.maintaining.name)}」`:"");
     card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站 · ⭐ ${p.score}${p.skipTurns>0?` · 💤×${p.skipTurns}`:""}${extra}</div></div>`;
     list.appendChild(card);
   });
@@ -648,7 +643,7 @@ function taskModal(p,tile,plan,opts){
       }
 
       // ----- Card kinds -----
-      if(kind==="start"){ await button(opts.opening?"全體脫鞋，出發！":"繼續"); if(opts.opening){state.shoesOff=true;renderPlayers();} return done(); }
+      if(kind==="shoes"){ await button("脫下鞋襪，赤腳前行 👣"); p.shoesOff=true; renderPlayers(); pushLog(`👣 ${p.name} 脫下鞋襪，赤腳直到遊戲結束。`); return done(); }
       if(kind==="maintain"){
         const useTimer=await choice([{label:"⏱ 先計時 20 秒",val:1},{label:"直接開始維持 →",val:0,cls:"good"}]);
         if(useTimer) await countdown(stage,20,"維持動作中…");
