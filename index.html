@@ -147,6 +147,11 @@
   .mini-type-target{font-size:20px;font-weight:800;background:#f3eeff;padding:12px;border-radius:10px;margin-bottom:8px;letter-spacing:2px;}
   .mini-type-input{width:100%;padding:11px;font-size:18px;border:2px solid var(--nile);border-radius:8px;}
   .mini-progress{font-size:13px;font-weight:700;color:#6a6a7a;margin-top:6px;text-align:center;}
+  .mini-guy{position:absolute;bottom:2px;font-size:26px;line-height:1;transform:translateX(-50%);pointer-events:none;}
+  .mini-drop{position:absolute;font-size:22px;line-height:1;pointer-events:none;}
+  .mini-rash{position:absolute;font-size:26px;line-height:1;cursor:pointer;user-select:none;}
+  .mini-person{position:absolute;font-size:26px;line-height:1;cursor:grab;touch-action:none;}
+  .mini-field,.mini-sea,.mini-trace{touch-action:none;}
 
   /* ---------- Win ---------- */
   #win-screen{position:fixed;inset:0;background:linear-gradient(135deg,#fef6e0,#ffd66a);display:flex;align-items:center;justify-content:center;z-index:200;}
@@ -280,7 +285,7 @@ const TILES=[
   {n:6,name:"再去找法老",icon:"🕺",cls:"versus",
    plan:(m,s)=>({kind:"versus",swap:true,game:m==="soft"?"dance":undefined,text:m==="land"?"再表演一小段舞蹈。"+(s==="vs"?"與對手比舞，勝者可選擇是否互換格子。":""):"跳舞機：依箭頭按下對應方向，又快又準者勝。"+(s==="vs"?"勝者可選擇是否互換格子。":"")})},
   {n:7,name:"杖變蛇",icon:"🐍",
-   plan:(m)=>({kind:"maintain",text:m==="land"?"杖變成了蛇！像蛇一樣在地上蠕動，維持到下一輪任務開始前。":"描線：螢幕出現直線或曲線，用滑鼠精準沿線移動，不可超出線外。"})},
+   plan:(m)=>m==="land"?{kind:"maintain",text:"杖變成了蛇！像蛇一樣在地上蠕動，維持到下一輪任務開始前。"}:{kind:"solo",game:"trace",text:"描線：用滑鼠／手指沿著彎曲的線從左滑到右，盡量不要超出線外。"}},
   {n:8,name:"河水變血",icon:"🩸",cls:"versus",
    plan:(m,s)=>({kind:"versus",swap:true,text:m==="land"?"與對手比賽找出紅色的東西，最快者勝。"+(s==="vs"?"勝者可選擇是否互換格子。":""):"找出紅色物品並拍照上傳。"+(s==="vs"?"與對手比快，最快者勝，勝者可選擇是否互換格子。":"上傳成功即可過關。")})},
   {n:9,name:"法老心剛硬",icon:"🗿",cls:"skip",
@@ -294,9 +299,9 @@ const TILES=[
   {n:13,name:"瘟疫",icon:"🐄",
    plan:(m,s)=>(m==="soft"&&s==="host")?{kind:"safe",text:"瘟疫蔓延，但這一關你平安通過。"}:{kind:"skip",turns:1,text:"瘟疫蔓延，牲畜倒下。暫停一輪。"}},
   {n:14,name:"起泡的瘡",icon:"🔴",
-   plan:(m,s)=>m==="land"?{kind:"maintain",text:"長出起泡的瘡，又癢又痛！做出抓癢的動作，維持到下一輪任務開始前。"}:{kind:"versus",swap:true,text:"擦疹子：用滑鼠來回擦拭，把疹子消乾淨。"+(s==="vs"?"與對手比快，最快者勝，勝者可選擇是否互換格子。":"消乾淨即可過關。")}},
+   plan:(m,s)=>m==="land"?{kind:"maintain",text:"長出起泡的瘡，又癢又痛！做出抓癢的動作，維持到下一輪任務開始前。"}:{kind:"versus",swap:true,game:"rash",text:"擦疹子：按住並來回擦拭，把疹子全部消乾淨。"+(s==="vs"?"最快消乾淨者勝，勝者可選擇是否互換格子。":"消乾淨即可過關。")}},
   {n:15,name:"冰雹與火",icon:"🧊",
-   plan:(m,s)=>m==="land"?{kind:"info",text:"天降冰雹與火！會被關主用水球或紙團丟（此關不對戰）。"}:{kind:"versus",swap:true,text:"操控螢幕底端的小人，閃避從天而降的冰雹與火。"+(s==="vs"?"被砸到次數最少者勝，勝者可選擇是否互換格子。":"撐過去即可過關。")}},
+   plan:(m,s)=>m==="land"?{kind:"info",text:"天降冰雹與火！會被關主用水球或紙團丟（此關不對戰）。"}:{kind:"versus",swap:true,game:"dodge",text:"操控小人左右移動，閃避從天而降的冰雹與火。"+(s==="vs"?"被砸到次數最少者勝，勝者可選擇是否互換格子。":"撐過去即可過關。")}},
   {n:16,name:"蝗災",icon:"🦗",
    plan:(m)=>m==="land"?{kind:"info",text:"蝗蟲鋪天蓋地！匍匐前進到關主指定的位置（此關不對戰）。"}:{kind:"advance",text:"蝗蟲過境。你可以選擇是否前進到下一格，並進行下一格的任務。"}},
   {n:17,name:"羔羊血塗門楣",icon:"🚪",
@@ -310,13 +315,13 @@ const TILES=[
   {n:21,name:"追兵",icon:"🏇",cls:"move",
    plan:(m)=>({kind:"penalty",text:m==="land"?"法老的追兵來了！限時 15 秒鬼抓人，被抓到的玩家扣 1 分。":"法老的追兵來了！電腦隨機抽中一名玩家扣 1 分。"})},
   {n:22,name:"紅海分開",icon:"🌊",
-   plan:(m)=>m==="land"?{kind:"maintain",text:"紅海分開！做出劈腿的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"info",text:"紅海分開！沿著乾路把人們一個個帶到路尾，途中不可碰到海水（碰到一次扣 1 分，此關不對戰）。"}},
+   plan:(m)=>m==="land"?{kind:"maintain",text:"紅海分開！做出劈腿的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"solo",game:"redsea",text:"紅海分開！沿著乾路把人們一個個從左拖到右側盡頭，途中不可碰到上下海水（碰到一次扣 1 分，此關不對戰）。"}},
   {n:23,name:"紅海合起來",icon:"🌊",
    plan:(m)=>m==="land"?{kind:"maintain",text:"紅海合起來！做出坐姿體前彎的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"safe",text:"海水合起來滅了追兵，這一輪你平安度過。"}},
   {n:24,name:"埃及軍隊被淹沒",icon:"💧",
    plan:(m)=>m==="land"?{kind:"info",text:"埃及軍隊被海水淹沒！喝五口水（此關不對戰）。"}:{kind:"safe",text:"海水滅了追兵，這一輪你平安度過。"}},
   {n:25,name:"以色列人勝",icon:"🎉",
-   plan:(m,s)=>m==="land"?(s==="host"?{kind:"info",text:"以色列人得勝！關主把手舉高，玩家跳起來拍關主的手。"}:{kind:"info",text:"以色列人得勝！做開合跳 15 下（此關不對戰）。"}):{kind:"info",text:"螢幕不定時出現「攤開的掌心」或「緊握的拳頭」：點掌心、但拳頭不可點，誤點一次扣 1 分（此關不對戰）。"}},
+   plan:(m,s)=>m==="land"?(s==="host"?{kind:"info",text:"以色列人得勝！關主把手舉高，玩家跳起來拍關主的手。"}:{kind:"info",text:"以色列人得勝！做開合跳 15 下（此關不對戰）。"}):{kind:"solo",game:"palm",text:"螢幕不定時出現「✋ 掌心」或「✊ 拳頭」：點掌心、但拳頭不可點，誤點一次扣 1 分（此關不對戰）。"}},
   {n:26,name:"向耶和華歌唱",sub:"終點",icon:"🌟",cls:"goal",
    plan:(m)=>({kind:"goal",text:m==="land"?"抵達終點！盡情喊叫、放聲歡呼！":"抵達終點！播放歡呼的音效，向耶和華歌唱！"})},
 ];
@@ -594,10 +599,18 @@ function taskModal(p,tile,plan,opts){
 
       // ----- Software mini-game tiles -----
       if(state.mode==="soft" && plan.game){
+        // Solo skill task (不對戰) — play once; mistakes may deduct score.
+        if(plan.kind==="solo"){
+          await button("開始挑戰 🎮"); controls.innerHTML="";
+          const r=await runMini(plan.game);
+          if(r.penalty>0){ p.score-=r.penalty; renderPlayers(); pushLog(`〔${tile.name}〕${p.name} 失誤 ${r.penalty} 次，扣 ${r.penalty} 分。`); setText(`完成！失誤 ${r.penalty} 次，扣 ${r.penalty} 分。`); }
+          else { pushLog(`✅ ${p.name} 完成了「${tile.name}」。`); setText(`完成！得分：${Math.round(r.score)}。`); }
+          await button("完成 ✓"); return done();
+        }
         if(state.submode==="host"){
           await button("開始挑戰 🎮"); controls.innerHTML="";
           const s=await runMini(plan.game);
-          setText(`完成！你的得分：${Math.round(s)}。`);
+          setText(`完成！你的得分：${Math.round(s.score)}。`);
           await button("完成闖關 ✓");
           pushLog(`✅ ${p.name} 完成了「${tile.name}」的挑戰。`);
           return done();
@@ -605,10 +618,10 @@ function taskModal(p,tile,plan,opts){
         const opp=await pickOpp();
         setText(`你與 ${opp.av.emoji}${opp.name} 對戰「${tile.name}」。${p.name} 先挑戰！`);
         await button(`${p.name} 開始 →`); controls.innerHTML="";
-        const ps=await runMini(plan.game);
+        const ps=(await runMini(plan.game)).score;
         setText(`${p.name} 得分 ${Math.round(ps)}。換 ${opp.av.emoji}${opp.name} 挑戰！`);
         await button(`${opp.name} 開始 →`); controls.innerHTML="";
-        const os=await runMini(plan.game);
+        const os=(await runMini(plan.game)).score;
         const pWin=ps>=os, winner=pWin?p:opp;
         setText(`${p.av.emoji}${p.name} ${Math.round(ps)} 比 ${opp.av.emoji}${opp.name} ${Math.round(os)} → ${winner.av.emoji}${winner.name} 獲勝！`);
         pushLog(`🏆 ${winner.name} 在「${tile.name}」勝出（${Math.round(ps)} : ${Math.round(os)}）。`);
@@ -678,9 +691,10 @@ function taskModal(p,tile,plan,opts){
 function runMini(key){
   return new Promise(resolve=>{
     const stage=document.getElementById("task-stage"); stage.innerHTML=""; stage.classList.remove("hidden");
-    if(navigator.webdriver && !window.FORCE_MINI){ setTimeout(()=>{stage.classList.add("hidden");stage.innerHTML="";resolve(Math.floor(Math.random()*1000));},10); return; }
+    const fin=r=>{ stage.classList.add("hidden"); stage.innerHTML=""; resolve(typeof r==="number"?{score:r,penalty:0}:{score:r.score||0,penalty:r.penalty||0}); };
+    if(navigator.webdriver && !window.FORCE_MINI){ setTimeout(()=>fin({score:Math.floor(Math.random()*1000),penalty:0}),10); return; }
     let settled=false;
-    MINIGAMES[key].mount(stage,score=>{ if(settled)return; settled=true; stage.classList.add("hidden"); stage.innerHTML=""; resolve(score); });
+    MINIGAMES[key].mount(stage,r=>{ if(settled)return; settled=true; fin(r); });
   });
 }
 function spawnTargets(stage,done,emoji,K,move){
@@ -727,6 +741,77 @@ const MINIGAMES={
     stage.innerHTML=`<div class="mini-type-target">${target}</div><input class="mini-type-input" placeholder="照著上面打字…"><div class="mini-progress"></div>`;
     const inp=stage.querySelector("input"); setTimeout(()=>inp.focus(),40);
     inp.addEventListener("input",()=>{ if(inp.value===target)done(Math.max(50,30000-(Date.now()-start))); });
+  }},
+  dodge:{mount(stage,done){
+    stage.innerHTML='<div class="mini-field" style="height:230px"></div><div class="mini-progress">移動滑鼠/手指左右閃避落下的冰雹與火！</div>';
+    const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
+    const guy=document.createElement("div"); guy.className="mini-guy"; guy.textContent="🧍"; field.appendChild(guy);
+    let gx=0; const setGuy=x=>{ gx=Math.max(15,Math.min(field.clientWidth-15,x)); guy.style.left=gx+"px"; };
+    setGuy(field.clientWidth/2);
+    field.addEventListener("pointermove",e=>{ const r=field.getBoundingClientRect(); setGuy(e.clientX-r.left); });
+    let hits=0,spawned=0; const N=14, active=[];
+    const sp=setInterval(()=>{ if(spawned>=N){clearInterval(sp);return;} spawned++;
+      const o=document.createElement("div"); o.className="mini-drop"; o.textContent=Math.random()<.5?"🧊":"🔥";
+      const x=Math.random()*(field.clientWidth-22); o.style.left=x+"px"; o.style.top="-24px"; field.appendChild(o);
+      active.push({el:o,x:x+11,y:-24,dead:false}); },420);
+    const tick=setInterval(()=>{ const guyY=field.clientHeight-26;
+      active.forEach(a=>{ if(a.dead)return; a.y+=14; a.el.style.top=a.y+"px";
+        if(a.y>guyY-18 && a.y<guyY+18 && Math.abs(a.x-gx)<24){ a.dead=true; a.el.remove(); hits++; prog.textContent="被砸到 "+hits+" 次"; }
+        else if(a.y>field.clientHeight){ a.dead=true; a.el.remove(); } });
+      if(spawned>=N && active.every(a=>a.dead)){ clearInterval(tick); done({score:Math.max(50,2200-hits*260)}); }
+    },60);
+  }},
+  rash:{mount(stage,done){
+    const K=8; let left=K,start=Date.now();
+    stage.innerHTML='<div class="mini-field" style="height:210px"></div><div class="mini-progress">按住並來回「擦拭」消除疹子（剩 '+left+'）</div>';
+    const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
+    for(let i=0;i<K;i++){ const s=document.createElement("div"); s.className="mini-rash"; s.textContent="🔴";
+      s.style.left=(Math.random()*(field.clientWidth-30))+"px"; s.style.top=(Math.random()*(field.clientHeight-30))+"px"; field.appendChild(s); }
+    let down=false;
+    const rub=e=>{ if(!down)return; const r=field.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+      field.querySelectorAll(".mini-rash").forEach(s=>{ if(s._d)return; const sx=parseFloat(s.style.left)+15,sy=parseFloat(s.style.top)+15;
+        if(Math.abs(x-sx)<26&&Math.abs(y-sy)<26){ s._d=true; s.remove(); left--; prog.textContent="按住擦拭消除疹子（剩 "+left+"）"; if(left<=0)done({score:Math.max(50,16000-(Date.now()-start))}); } }); };
+    field.addEventListener("pointerdown",e=>{down=true;rub(e);});
+    document.addEventListener("pointerup",()=>down=false);
+    field.addEventListener("pointermove",rub);
+    field.addEventListener("click",rub2); function rub2(e){ down=true; rub(e); down=false; } // tap-to-rub fallback
+  }},
+  trace:{mount(stage,done){
+    const W=360,H=160; let errors=0,maxX=0,fin=false;
+    stage.innerHTML=`<div class="mini-trace" style="position:relative;height:${H}px;background:#eef7ff;border:2px solid #b9dcf5;border-radius:12px;overflow:hidden"><svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="" stroke="#1a4d6b" stroke-width="3" fill="none"/></svg></div><div class="mini-progress">沿著線從左滑到右，盡量不要超出線（誤差 0）</div>`;
+    const box=stage.querySelector(".mini-trace"),path=box.querySelector("path"),prog=stage.querySelector(".mini-progress");
+    const f=x=>H/2+Math.sin(x/45)*40;
+    let d="M 0 "+f(0); for(let x=4;x<=W;x+=4)d+=" L "+x+" "+f(x); path.setAttribute("d",d);
+    box.addEventListener("pointermove",e=>{ if(fin)return; const r=box.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
+      if(x>maxX)maxX=x; if(Math.abs(y-f(x))>22){ errors++; prog.textContent="沿著線滑（誤差 "+errors+"）"; }
+      if(maxX>=W-8){ fin=true; done({score:Math.max(50,2000-errors*25)}); } });
+  }},
+  redsea:{mount(stage,done){
+    const H=200; let people=4,touches=0,cur=null,drag=false;
+    stage.innerHTML='<div class="mini-sea" style="position:relative;height:'+H+'px;border-radius:12px;overflow:hidden;background:linear-gradient(#6ec1e4 0 26%,#f3e3b8 26% 74%,#6ec1e4 74% 100%)"></div><div class="mini-progress">把人一個個從左拖到右側乾路盡頭，別碰到上下海水（碰到扣分）。剩 '+people+' 人</div>';
+    const sea=stage.querySelector(".mini-sea"),prog=stage.querySelector(".mini-progress");
+    function spawn(){ if(people<=0){ done({score:Math.max(50,2000-touches*150),penalty:touches}); return; }
+      cur=document.createElement("div"); cur.className="mini-person"; cur.textContent="🧍"; cur.style.left="6px"; cur.style.top=(H/2-15)+"px"; sea.appendChild(cur); }
+    sea.addEventListener("pointerdown",e=>{ if(e.target===cur)drag=true; });
+    document.addEventListener("pointerup",()=>drag=false);
+    sea.addEventListener("pointermove",e=>{ if(!drag||!cur)return; const r=sea.getBoundingClientRect();
+      let x=Math.max(0,Math.min(r.width-30,e.clientX-r.left-15)),y=Math.max(0,Math.min(H-30,e.clientY-r.top-15));
+      cur.style.left=x+"px"; cur.style.top=y+"px";
+      if(y<H*0.26-4||y>H*0.74-26){ if(!cur._t){cur._t=true;touches++;prog.textContent="別碰到海水（已碰 "+touches+" 次）";setTimeout(()=>{if(cur)cur._t=false;},250);} }
+      if(x>=r.width-34){ cur.remove(); people--; prog.textContent="剩 "+people+" 人"; cur=null; drag=false; spawn(); } });
+    spawn();
+  }},
+  palm:{mount(stage,done){
+    let score=0,penalty=0,shown=0; const N=12;
+    stage.innerHTML='<div class="mini-field" style="height:200px"></div><div class="mini-progress">點「✋」、別點「✊」（誤點扣分）。命中 0 / 誤點 0</div>';
+    const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
+    const upd=()=>prog.textContent="點 ✋、別點 ✊。命中 "+score+" / 誤點 "+penalty;
+    const iv=setInterval(()=>{ if(shown>=N){ clearInterval(iv); setTimeout(()=>done({score:Math.max(50,score*300-penalty*150+600),penalty}),350); return; } shown++;
+      const isPalm=Math.random()<.6; const b=document.createElement("button"); b.className="mini-target"; b.textContent=isPalm?"✋":"✊";
+      b.style.left=(Math.random()*(field.clientWidth-44))+"px"; b.style.top=(Math.random()*(field.clientHeight-44))+"px"; field.appendChild(b);
+      b.addEventListener("click",()=>{ if(b._u)return; b._u=true; if(isPalm)score++; else penalty++; upd(); b.remove(); });
+      setTimeout(()=>{ if(!b._u){ b._u=true; b.remove(); } },950);
+    },680); upd();
   }},
 };
 
