@@ -496,15 +496,15 @@ const TILES=[
   {n:20,name:"雲柱火柱隨行",icon:"☁️",
    plan:(m)=>m==="land"?{kind:"info",text:"兩人三腳走到關主指定地點（此關不對戰）；落單的玩家則向左轉 5 圈、向右轉 5 圈，再跑直線到目的地。"}:{kind:"solo",game:"arrange",text:"把雲柱、火柱與人排成「☁️ 雲 － 🧍 人 － 🔥 火」的順序即可過關（此關不對戰）。"}},
   {n:21,name:"追兵",icon:"🏇",cls:"move",
-   plan:(m)=>({kind:"penalty",timer:m==="land"?15:0,text:m==="land"?"法老的追兵來了！限時 15 秒鬼抓人，被抓到的玩家扣 1 分。":"法老的追兵來了！電腦隨機抽中一名玩家扣 1 分。"})},
+   plan:(m)=>({kind:"penalty",timer:m==="land"?15:0,text:m==="land"?"法老的追兵來了！限時 15 秒鬼抓人，被抓到的玩家後退 1 格。":"法老的追兵來了！電腦隨機抽中一名玩家後退 1 格。"})},
   {n:22,name:"紅海分開",icon:"🌊",
-   plan:(m)=>m==="land"?{kind:"maintain",text:"紅海分開！做出劈腿的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"solo",game:"redsea",text:"紅海分開！沿著乾路把人們一個個從左拖到右側盡頭，途中不可碰到上下海水（碰到一次扣 1 分，此關不對戰）。"}},
+   plan:(m)=>m==="land"?{kind:"maintain",text:"紅海分開！做出劈腿的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"solo",game:"redsea",text:"紅海分開！沿著乾路把人們一個個從左拖到右側盡頭，途中盡量不要碰到上下海水（此關不對戰）。"}},
   {n:23,name:"紅海合起來",icon:"🌊",
    plan:(m)=>m==="land"?{kind:"maintain",text:"紅海合起來！做出坐姿體前彎的動作，維持到下一關任務前（此關不對戰）。"}:{kind:"safe",text:"海水合起來滅了追兵，這一輪你平安度過。"}},
   {n:24,name:"埃及軍隊被淹沒",icon:"💧",
    plan:(m)=>m==="land"?{kind:"info",text:"埃及軍隊被海水淹沒！喝五口水（此關不對戰）。"}:{kind:"safe",text:"海水滅了追兵，這一輪你平安度過。"}},
   {n:25,name:"以色列人勝",icon:"🎉",
-   plan:(m,s)=>m==="land"?(s==="host"?{kind:"info",text:"以色列人得勝！關主把手舉高，玩家跳起來拍關主的手。"}:{kind:"info",text:"以色列人得勝！做開合跳 15 下（此關不對戰）。"}):{kind:"solo",game:"palm",text:"螢幕不定時出現「✋ 掌心」或「✊ 拳頭」：點掌心、但拳頭不可點，誤點一次扣 1 分（此關不對戰）。"}},
+   plan:(m,s)=>m==="land"?(s==="host"?{kind:"info",text:"以色列人得勝！關主把手舉高，玩家跳起來拍關主的手。"}:{kind:"info",text:"以色列人得勝！做開合跳 15 下（此關不對戰）。"}):{kind:"solo",game:"palm",text:"螢幕不定時出現「✋ 掌心」或「✊ 拳頭」：點掌心、但拳頭不可點（此關不對戰）。"}},
   {n:26,name:"向耶和華歌唱",sub:"終點",icon:"🌟",cls:"goal",
    plan:(m)=>({kind:"goal",text:m==="land"?"抵達終點！盡情喊叫、放聲歡呼！":"抵達終點！播放歡呼的音效，向耶和華歌唱！"})},
 ];
@@ -607,7 +607,7 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   for(let i=0;i<state.humans;i++){
     const pk=state.picks[i];
     if(players.some(p=>p.av===pk.av)){alert("有兩位玩家選了相同的角色。");return;}
-    players.push({id:i,name:(pk.name||"").trim()||`玩家 ${i+1}`,av:AVATARS[pk.av],avIdx:pk.av,pos:0,score:0,skipTurns:0,maintaining:null,shoesOff:false});
+    players.push({id:i,name:(pk.name||"").trim()||`玩家 ${i+1}`,av:AVATARS[pk.av],avIdx:pk.av,pos:0,skipTurns:0,maintaining:null,shoesOff:false});
   }
   startGame(players);
 });
@@ -625,7 +625,7 @@ async function startGame(players){
   const nb=Math.max(0,Math.min(MAX_BOTS,state.bots|0));
   for(let i=0;i<nb;i++){
     const av=COMP_AVS[i%COMP_AVS.length];
-    players.push({id:COMP_ID+i,name:nb>1?`電腦玩家 ${i+1}`:"電腦玩家",av,avIdx:-1,pos:0,score:0,skipTurns:0,maintaining:null,shoesOff:false,isBot:true,_roll:1+Math.floor(Math.random()*6)});
+    players.push({id:COMP_ID+i,name:nb>1?`電腦玩家 ${i+1}`:"電腦玩家",av,avIdx:-1,pos:0,skipTurns:0,maintaining:null,shoesOff:false,isBot:true,_roll:1+Math.floor(Math.random()*6)});
   }
   state.players=players; state.turnIdx=0; state.busy=false; state.log=[];
   document.getElementById("setup").style.display="none";
@@ -696,8 +696,7 @@ function renderPlayers(){
     card.className="player-card"+(i===state.turnIdx?" active":"")+(p.skipTurns>0?" skipping":"");
     card.dataset.pid=p.id; card.setAttribute("role","button"); card.setAttribute("tabindex","0");
     const tile=BOARD[p.pos];
-    const extra=(p.shoesOff?" · 👣赤腳":"")+(p.maintaining?` · 🧘維持「${escapeHtml(p.maintaining.name)}」`:"");
-    card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站 · ⭐ ${p.score}${p.skipTurns>0?` · 💤×${p.skipTurns}`:""}${extra}</div></div>`;
+    card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站</div></div>`;
     list.appendChild(card);
   });
 }
@@ -822,7 +821,7 @@ async function autoResolveTile(bot){
   if(kind==="maintain"){ pushLog(`🤖 ${bot.name} 通過了「${tile.name}」。`); renderPlayers(); return; }
   if(kind==="penalty"){
     const v=state.players[Math.floor(Math.random()*state.players.length)];
-    v.score-=1; renderPlayers(); pushLog(`🏇 追兵抓到了 ${v.av.emoji}${v.name}，扣 1 分。`); return;
+    applyMove(v,-1); pushLog(`🏇 追兵抓到了 ${v.av.emoji}${v.name}，後退 1 格。`); return;
   }
   if(kind==="advance"){
     if(Math.random()<0.5 && bot.pos<GOAL_IDX){ bot.pos++; renderTokens(); renderPlayers(); pushLog(`🦗 ${bot.name} 前進一格。`);
@@ -900,18 +899,18 @@ function taskModal(p,tile,plan,opts){
 
       // ----- Software mini-game tiles -----
       if(state.mode==="soft" && plan.game){
-        // Solo skill task (不對戰) — play once; mistakes may deduct score.
+        // Solo skill task (不對戰) — play once; purely for fun, no score.
         if(plan.kind==="solo"){
           await button("開始挑戰 🎮"); controls.innerHTML="";
           const r=await runMini(plan.game);
-          if(r.penalty>0){ p.score-=r.penalty; renderPlayers(); pushLog(`〔${tile.name}〕${p.name} 失誤 ${r.penalty} 次，扣 ${r.penalty} 分。`); setText(`完成！失誤 ${r.penalty} 次，扣 ${r.penalty} 分。`); }
-          else { pushLog(`✅ ${p.name} 完成了「${tile.name}」。`); setText(`完成！得分：${Math.round(r.score)}。`); }
+          if(r.penalty>0){ pushLog(`〔${tile.name}〕${p.name} 完成了，失誤 ${r.penalty} 次。`); setText(`完成！失誤 ${r.penalty} 次，沒關係，繼續前進！`); }
+          else { pushLog(`✅ ${p.name} 完成了「${tile.name}」。`); setText(`完成！表現得很好。`); }
           await button("完成 ✓"); return done();
         }
         if(state.submode==="host"){
           await button("開始挑戰 🎮"); controls.innerHTML="";
-          const s=await runMini(plan.game);
-          setText(`完成！你的得分：${Math.round(s.score)}。`);
+          await runMini(plan.game);
+          setText(`完成！順利通過關主的考驗。`);
           await button("完成闖關 ✓");
           pushLog(`✅ ${p.name} 完成了「${tile.name}」的挑戰。`);
           return done();
@@ -958,8 +957,8 @@ function taskModal(p,tile,plan,opts){
         if(state.mode==="land" && plan.timer){ await button("開始鬼抓人 🏃"); await countdown(stage,plan.timer,"鬼抓人！快跑！"); }
         else await button("抽出受罰者","warn");
         const v=state.players[Math.floor(Math.random()*state.players.length)];
-        v.score-=1; renderPlayers(); SFX.lose(); pushLog(`🏇 追兵抓到了 ${v.av.emoji}${v.name}，扣 1 分。`);
-        setText(`被抓到的是 ${v.av.emoji}${v.name}，扣 1 分。`); await button("繼續"); return done();
+        applyMove(v,-1); SFX.lose(); pushLog(`🏇 追兵抓到了 ${v.av.emoji}${v.name}，後退 1 格。`);
+        setText(`被抓到的是 ${v.av.emoji}${v.name}，後退 1 格。`); await button("繼續"); return done();
       }
       if(kind==="advance"){
         const go=await choice([{label:"前進一格並挑戰",val:1},{label:"留在原地",val:0,cls:"ghost"}]);
@@ -1234,7 +1233,8 @@ function openInfoTile(idx){
 function openInfoPlayer(pid){
   const p=state.players.find(x=>x.id===pid); if(!p)return;
   const tile=BOARD[p.pos];
-  openInfo(p.av.emoji,p.name,`角色：${p.av.name}`,`目前位置：第 ${tile.n} 站「${tile.name}」\n分數：${p.score}\n${p.skipTurns>0?`暫停回合：${p.skipTurns}`:"狀態正常"}`);
+  const st=[p.skipTurns>0?`暫停 ${p.skipTurns} 回合`:"",p.maintaining?`維持「${p.maintaining.name}」`:"",p.shoesOff?"赤腳":""].filter(Boolean).join("、")||"狀態正常";
+  openInfo(p.av.emoji,p.name,`角色：${p.isBot?"電腦玩家":p.av.name}`,`目前位置：第 ${tile.n} 站「${tile.name}」\n${st}`);
 }
 document.getElementById("info-close").addEventListener("click",()=>{
   document.getElementById("info-backdrop").classList.add("hidden");
@@ -1291,8 +1291,8 @@ function win(winner){
   launchConfetti();
   pushLog(winner.isBot?`🤖 ${winner.av.emoji}${winner.name} 搶先抵達終點，玩家們再接再厲！`:`🌟 ${winner.av.emoji}${winner.name} 抵達終點，向耶和華歌唱！`,"hi");
   document.getElementById("winner-name").textContent=`${winner.av.emoji} ${winner.name}`;
-  const sorted=[...state.players].sort((a,b)=>{if(a.id===winner.id)return -1;if(b.id===winner.id)return 1;if(b.pos!==a.pos)return b.pos-a.pos;return b.score-a.score;});
-  document.getElementById("standings").innerHTML=sorted.map((p,i)=>`<div class="row"><span><strong>${i+1}.</strong> ${p.av.emoji} ${escapeHtml(p.name)}</span><span>第 ${BOARD[p.pos].n} 站 · ⭐ ${p.score}</span></div>`).join("");
+  const sorted=[...state.players].sort((a,b)=>{if(a.id===winner.id)return -1;if(b.id===winner.id)return 1;return b.pos-a.pos;});
+  document.getElementById("standings").innerHTML=sorted.map((p,i)=>`<div class="row"><span><strong>${i+1}.</strong> ${p.av.emoji} ${escapeHtml(p.name)}</span><span>第 ${BOARD[p.pos].n} 站</span></div>`).join("");
   document.getElementById("win-screen").classList.remove("hidden");
 }
 
@@ -1318,7 +1318,7 @@ document.getElementById("help-btn").addEventListener("click",()=>{
     "🎮 模式：\n• 遊戲軟體模式：在螢幕上玩迷你遊戲。\n• 大地遊戲模式：在實體場地做動作闖關。\n兩種模式都可搭配「關主模式」或「玩家對戰模式」。\n\n"+
     "🧑‍🏫 關主模式：關主是主持人（裁判），負責出題、陪你猜拳、判定過關，不繞圈競賽。可以只有 1 位玩家自己和關主玩。\n👥 參賽人數：用 ＋／− 分別設定「玩家」與「電腦」人數。🤖 電腦玩家會自動擲骰、自己繞圈與大家競賽，數量可加可不加（也可 0 個）。\n\n"+
     "⚔️ 對戰格：指定一位玩家比賽，贏的一方可選擇是否與對手互換格子（換到對方位置、但不執行該格任務）。\n\n"+
-    "🎴 機會與命運（法老放行）：抽卡決定前進步數，或暫停一輪。\n🏇 追兵：隨機抽一位玩家扣 1 分。\n🧘 大地維持動作：會在玩家卡顯示「維持中」，輪到你時自動解除。\n\n"+
+    "🎴 機會與命運（法老放行）：抽卡決定前進步數，或暫停一輪。\n🏇 追兵：隨機抽一位玩家後退 1 格。\n🧘 大地維持動作：做出動作維持到下一輪，輪到你時自動解除。\n\n"+
     "💡 點任一格可查看該格任務；點玩家卡可查看狀態。");
 });
 document.getElementById("new-game-btn").addEventListener("click",()=>{if(confirm("要放棄這一局並回到設定畫面嗎？"))backToSetup();});
