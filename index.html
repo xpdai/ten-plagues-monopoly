@@ -317,7 +317,10 @@
     .modal .controls button{padding:15px 16px;font-size:17px;}
   }
   /* ---------- Inline SVG icon system (line style) ---------- */
-  .ic{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex:none;}
+  .ic{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex:none;object-fit:contain;}
+  img.ic{user-select:none;-webkit-user-drag:none;}
+  .credit{text-align:center;font-size:11px;color:var(--ink-soft);margin:14px 0 0;}
+  .credit a{color:var(--teal-deep);}
   .ic-rot90{transform:rotate(90deg);} .ic-rot180{transform:rotate(180deg);} .ic-rot270{transform:rotate(270deg);}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
@@ -456,6 +459,7 @@
   </div>
 
   <button id="start-btn">開始遊戲</button>
+  <p class="credit">圖示 by <a href="https://icons8.com" target="_blank" rel="noopener">Icons8</a></p>
 </section>
 
 <!-- ============ GAME ============ -->
@@ -694,8 +698,30 @@ document.getElementById("start-btn").addEventListener("click",()=>{
 
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
-// ---- Inline SVG icons (sprite in <body>) ----
-function ic(name,cls){return `<svg class="ic${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
+// ---- Icons: Icons8 colour set (hotlinked CDN, free use w/ attribution),
+//      with the inline hand-drawn sprite as offline fallback for the few
+//      concepts Icons8 has no good match for. ----
+const I8={
+  sheep:"color/sheep",eagle:"color/falcon",cactus:"color/cactus",robot:"color/robot",alien:"color/alien",
+  mech:"color/robot-2",ufo:"color/rocket",teacher:"color/teacher",flag:"color/finish-flag",fire:"color/fire-element",
+  fist:"color/rock",dance:"color/dancing",ban:"color/cancel",megaphone:"color/megaphone",snake:"color/snake",
+  blood:"color/drop-of-blood",moai:"color/statue",frog:"color/frog",mosquito:"color/mosquito",fly:"color/fly",
+  cow:"color/cow",boil:"color/pimple",ice:"fluency/ice-cube",locust:"color/grasshopper",door:"color/door",
+  moon:"color/moon",cloud:"color/cloud",horse:"color/horse",wave:"color/tsunami",droplet:"color/water",
+  party:"color/confetti",star:"color/star",dice:"color/dice",help:"color/help",book:"color/book",
+  sound:"color/speaker",mute:"color/mute",desert:"color/sun",joystick:"color/joystick",tree:"color/deciduous-tree",
+  swords:"color/sword",handraise:"color/hand-up",people:"color/conference-call",target:"color/target",bulb:"color/idea",
+  sleep:"color/sleeping",meditate:"color/yoga",footprints:"color/walking",check:"color/checkmark",anger:"color/angry",
+  planeland:"color/airplane-landing",swap:"color/exchange",sparkle:"color/sparkling",run:"color/running",
+  timer:"color/stopwatch",gamepad:"color/controller",person:"color/standing-man",palm:"color/hand",
+  scissors:"color/scissors",arrow:"color/up",finger:"color/tap-gesture",
+};
+function ic(name,cls){
+  const c="ic"+(cls?" "+cls:"");
+  const slug=I8[name];
+  if(slug){const i=slug.indexOf("/");return `<img class="${c}" src="https://img.icons8.com/${slug.slice(0,i)}/96/${slug.slice(i+1)}.png" alt="" draggable="false">`;}
+  return `<svg class="${c}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+}
 // emoji → icon name (+ optional space-separated extra classes)
 const EMOJI2NAME={
   "🐫":"camel","🐑":"sheep","🦅":"eagle","🌵":"cactus","🤖":"robot","👾":"alien","🦾":"mech","🛸":"ufo","🧑‍🏫":"teacher",
@@ -1421,7 +1447,7 @@ document.getElementById("help-btn").addEventListener("click",()=>{
     "🧑‍🏫 關主模式：關主是主持人（裁判），負責出題、陪你猜拳、判定過關，不繞圈競賽。可以只有 1 位玩家自己和關主玩。\n👥 參賽人數：用 ＋／− 分別設定「玩家」與「電腦」人數。🤖 電腦玩家會自動擲骰、自己繞圈與大家競賽，數量可加可不加（也可 0 個）。\n\n"+
     "⚔️ 對戰格：指定一位玩家比賽，贏的一方可選擇是否與對手互換格子（換到對方位置、但不執行該格任務）。\n\n"+
     "🎴 機會與命運（法老放行）：抽卡決定前進步數，或暫停一輪。\n🏇 追兵：隨機抽一位玩家後退 1 格。\n🧘 大地維持動作：做出動作維持到下一輪，輪到你時自動解除。\n\n"+
-    "💡 點任一格可查看該格任務；點玩家卡可查看狀態。");
+    "💡 點任一格可查看該格任務；點玩家卡可查看狀態。\n\n🎨 圖示來源：Icons8（icons8.com）。");
 });
 document.getElementById("new-game-btn").addEventListener("click",()=>{if(confirm("要放棄這一局並回到設定畫面嗎？"))backToSetup();});
 document.getElementById("play-again-btn").addEventListener("click",backToSetup);
