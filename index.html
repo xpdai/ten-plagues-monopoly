@@ -71,8 +71,8 @@
   /* ---------- Setup (storybook cover) ---------- */
   #setup{max-width:660px;margin:4vh auto;background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
     padding:30px 28px 26px;border:3px solid var(--ink);border-radius:30px 26px 32px 24px;box-shadow:var(--pop);position:relative;}
-  #setup::before{content:"🏜️";position:absolute;top:-30px;left:50%;transform:translateX(-50%) rotate(-4deg);
-    font-size:46px;background:var(--cream);border:2.5px solid var(--ink);border-radius:50%;width:70px;height:70px;
+  #setup .emblem{position:absolute;top:-30px;left:50%;transform:translateX(-50%) rotate(-4deg);
+    font-size:40px;color:var(--teal-deep);background:var(--cream);border:2.5px solid var(--ink);border-radius:50%;width:70px;height:70px;
     display:flex;align-items:center;justify-content:center;box-shadow:var(--pop-sm);}
   #setup h1{font-size:38px;text-align:center;color:var(--teal-deep);margin-top:18px;text-shadow:2px 2px 0 rgba(255,255,255,.7);}
   #setup p.subtitle{text-align:center;color:var(--ink-soft);margin:8px 0 22px;font-size:15px;}
@@ -257,7 +257,7 @@
     padding:38px 34px;border:3px solid var(--ink);border-radius:34px 28px 36px 26px;box-shadow:0 18px 0 rgba(74,54,36,.16),0 30px 70px rgba(0,0,0,.28);
     position:relative;z-index:210;animation:popin .5s cubic-bezier(.34,1.56,.64,1);}
   #win-screen h1{font-size:38px;color:var(--teal-deep);margin-bottom:12px;}
-  #win-screen h1::after{content:"🏆";display:block;font-size:62px;margin-top:8px;animation:trophybob 1.8s ease-in-out infinite;}
+  #win-screen .win-trophy{font-size:58px;color:var(--gold,#e9b949);margin:6px 0 2px;display:flex;justify-content:center;animation:trophybob 1.8s ease-in-out infinite;}
   @keyframes trophybob{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-10px) rotate(5deg)}}
   #win-screen .winner-name{font-size:30px;font-weight:800;font-family:"Baloo 2","LXGW WenKai TC",sans-serif;color:var(--coral-deep);margin:10px 0 22px;}
   #win-screen .standings{text-align:left;}
@@ -279,7 +279,7 @@
   #task-stage[data-game="palm"] .mini-field{background:linear-gradient(#e0eafb,#c6ddf4);}
   .mini-target{transition:transform .1s,filter .1s;}
   .mini-tap{background:linear-gradient(160deg,#54bdb8,#2c7d7a);position:relative;overflow:hidden;}
-  .mini-tap::after{content:"👆";position:absolute;right:14px;bottom:8px;font-size:30px;opacity:.45;animation:iconbob 1.3s ease-in-out infinite;}
+  .mini-tap .tap-finger{position:absolute;right:14px;bottom:8px;font-size:30px;opacity:.5;color:#fff;animation:iconbob 1.3s ease-in-out infinite;}
   .mini-tap .cnt{background:rgba(255,255,255,.25);padding:3px 12px;border-radius:14px;}
 
   /* ---------- Land-game countdown ring ---------- */
@@ -316,15 +316,93 @@
     .modal{padding:22px 18px;}
     .modal .controls button{padding:15px 16px;font-size:17px;}
   }
+  /* ---------- Inline SVG icon system (line style) ---------- */
+  .ic{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex:none;stroke:currentColor;fill:none;}
+  .ic-rot90{transform:rotate(90deg);} .ic-rot180{transform:rotate(180deg);} .ic-rot270{transform:rotate(270deg);}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
 </head>
 <body>
 
+<!-- ============ INLINE SVG ICON SPRITE (line style) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <g id="icbase"></g>
+  <!-- avatars -->
+  <symbol id="i-camel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c2-6 5-6 6 0 1-7 6-7 7 0"/><path d="M16 17v-4q0-3 3-3"/><path d="M5 17v3M9 17v3M14 17v3M18 17v3"/></symbol>
+  <symbol id="i-sheep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8a3 3 0 0 1 5-1 3 3 0 0 1 4 3 3 3 0 0 1-1 5 4 4 0 0 1-9 0 3 3 0 0 1 1-6z"/><circle cx="7" cy="11" r="2.4"/><path d="M9 18v2M14 18v2"/></symbol>
+  <symbol id="i-eagle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10q5 5 9 0 4 5 9 0"/><path d="M12 10v6l-2 2M12 16l2 2"/><path d="M12 10l1.5-1.5"/></symbol>
+  <symbol id="i-cactus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V7"/><path d="M12 14H9a2 2 0 0 1-2-2v-1"/><path d="M12 12h3a2 2 0 0 0 2-2V9"/><path d="M9 21h6"/></symbol>
+  <symbol id="i-robot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="2"/><path d="M12 5v3M12 5h-.01"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9.5 16h5"/></symbol>
+  <symbol id="i-alien" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6h10v7a5 5 0 0 1-10 0z"/><path d="M5 9H3M21 9h-2M7 19l-1 2M17 19l1 2"/><path d="M10 12h.01M14 12h.01"/></symbol>
+  <symbol id="i-mech" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v6a3 3 0 0 0 3 3h4"/><rect x="11" y="11" width="8" height="5" rx="1"/><path d="M15 16v4M12 20h6"/></symbol>
+  <symbol id="i-ufo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8a3 3 0 0 1 6 0"/><ellipse cx="12" cy="11" rx="9" ry="3"/><path d="M8 14l-2 5M16 14l2 5M12 14v6"/></symbol>
+  <symbol id="i-teacher" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M4 20v-1a5 5 0 0 1 5-5h0a5 5 0 0 1 5 5v1"/><rect x="15" y="5" width="6" height="8" rx="1"/><path d="M17 8h2M17 10.5h2"/></symbol>
+  <!-- tiles -->
+  <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 5h11l-2 3 2 3H6"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3 5 4 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 .5 1.5 1.5 2 2 1 .5-1-1-3 1-6z"/></symbol>
+  <symbol id="i-fist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="9" width="12" height="9" rx="3"/><path d="M9 9V8a1.5 1.5 0 0 1 3 0v1M12 9V7.5a1.5 1.5 0 0 1 3 0V9M9 13h9"/></symbol>
+  <symbol id="i-dance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="5" r="2"/><path d="M13 7l-2 5 3 2 1 5M11 12l-4-1M14 14l3 1"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M7 7l10 10"/></symbol>
+  <symbol id="i-megaphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4l9 4V6z"/><path d="M13 8a4 4 0 0 1 0 8"/><path d="M6 14v3h2"/></symbol>
+  <symbol id="i-snake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18c4 0 4-4 0-4s-4-4 0-4 5 3 9 3"/><path d="M18 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/><path d="M19 8v1.5"/></symbol>
+  <symbol id="i-blood" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3 5 5 7 5 10a5 5 0 0 1-10 0c0-3 2-5 5-10z"/></symbol>
+  <symbol id="i-moai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v13a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3z"/><path d="M9 9h2M13 9h2M10 14h4"/></symbol>
+  <symbol id="i-frog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14a7 7 0 0 1 14 0v1a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"/><circle cx="8.5" cy="9" r="1.6"/><circle cx="15.5" cy="9" r="1.6"/><path d="M9 15h6"/></symbol>
+  <symbol id="i-mosquito" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v9M12 17l-3 3M12 17l3 3"/><path d="M12 9C9 5 4 5 3 8c3 1 6 1 9 1zM12 9c3-4 8-4 9-1-3 1-6 1-9 1z"/><path d="M12 8V5"/></symbol>
+  <symbol id="i-fly" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="13" rx="3" ry="4"/><path d="M11 7C8 4 4 5 4 8c2 1.5 5 1.5 7 0zM13 7c3-3 7-2 7 1-2 1.5-5 1.5-7 0z"/><path d="M11 5l1-1 1 1"/></symbol>
+  <symbol id="i-cow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7c-2-2-3 0-3 2 0 1 1 2 2 2M18 7c2-2 3 0 3 2 0 1-1 2-2 2"/><path d="M5 10a7 7 0 0 0 14 0v2a7 7 0 0 1-14 0z"/><path d="M9 11h.01M15 11h.01M9 15h6"/></symbol>
+  <symbol id="i-boil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="6"/><path d="M12 13l2-3M10 6.5a2 2 0 0 1 4 0"/></symbol>
+  <symbol id="i-ice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3v18M4 7.5l16 9M20 7.5l-16 9"/></symbol>
+  <symbol id="i-locust" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8c2-2 5-2 9 1l3 3M9 9l9 7"/><path d="M15 9l3-3M18 14l2-1"/><path d="M9 12l-4 1 3 3-4 1"/></symbol>
+  <symbol id="i-door" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="1"/><path d="M14 12h.5"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13a8 8 0 1 1-9-9 6 6 0 0 0 9 9z"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M12 8l2 3-2 3-2-3z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-8 5 5 0 0 1 9.5-1 3.5 3.5 0 0 1 1 7z"/></symbol>
+  <symbol id="i-horse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-5 2-8 6-9l-1-3 4 2 3-1c1 3 0 5-2 6l1 5"/><path d="M9 8l-2-2"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c2-2 4-2 6 0M3 14c2-2 4-2 6 0M3 19c2-2 4-2 6 0"/><path d="M9 9c2-2 4-2 6 0M9 14c2-2 4-2 6 0M9 19c2-2 4-2 6 0"/><path d="M15 9c2-2 4-2 6 0M15 14c2-2 4-2 6 0M15 19c2-2 4-2 6 0"/></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z"/><path d="M10 14a2 2 0 0 0 2 2"/></symbol>
+  <symbol id="i-party" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l5-13 6 6z"/><path d="M9 7c2-2 5-1 5 2M14 5l2-2M18 8l3-1M17 13l3 1"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></symbol>
+  <!-- UI -->
+  <symbol id="i-dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4 1.5c0 1.5-2 2-2 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-5-1.5-8-1v13c3-.5 6-.5 8 1 2-1.5 5-1.5 8-1V5c-3-.5-6-.5-8 1z"/><path d="M12 6v13"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h3l5 4V5L7 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 7a7 7 0 0 1 0 10"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h3l5 4V5L7 9z"/><path d="M16 10l5 4M21 10l-5 4"/></symbol>
+  <symbol id="i-desert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><path d="M3 19c3-4 5-4 8 0 2-3 4-3 7-1"/><path d="M3 16h2"/></symbol>
+  <symbol id="i-joystick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="2"/><path d="M12 8v6"/><rect x="6" y="14" width="12" height="6" rx="2"/></symbol>
+  <symbol id="i-tree" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 1 4 10 4 4 0 0 1-8 0 6 6 0 0 1 4-10z"/><path d="M12 13v8M9 18h6"/></symbol>
+  <symbol id="i-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l9 9M4 4v3l2 1M6 14l-3 3 1 2 3-3"/><path d="M20 4l-9 9M20 4v3l-2 1M18 14l3 3-1 2-3-3"/></symbol>
+  <symbol id="i-handraise" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="6" r="2.5"/><path d="M6 20v-3a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v3"/><path d="M16 11l3-4"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M3 19v-1a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1"/><path d="M16 6.5a2.5 2.5 0 0 1 0 5M17 14h1a4 4 0 0 1 4 4v1"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 1 4 10c-.7.7-1 1.5-1 2H9c0-.5-.3-1.3-1-2a6 6 0 0 1 4-10z"/></symbol>
+  <!-- badges / log -->
+  <symbol id="i-sleep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h5l-5 6h5"/><path d="M14 5h5l-5 6h5"/></symbol>
+  <symbol id="i-meditate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v4M5 19c1-4 3-6 7-6s6 2 7 6"/><path d="M5 19l5-3M19 19l-5-3"/></symbol>
+  <symbol id="i-footprints" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5c1.6 0 2 2 1.6 4S7 13 6 13s-1.6-2-1.2-4S5.4 5 7 5z"/><path d="M5 16h3v2a1.5 1.5 0 0 1-3 0z"/><path d="M17 8c1.6 0 2 2 1.6 4S17 16 16 16s-1.6-2-1.2-4S15.4 8 17 8z"/><path d="M15 19h3v1.5a1.5 1.5 0 0 1-3 0z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/><path d="M12 14v3M9 20h6M10 17h4"/></symbol>
+  <symbol id="i-anger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v6M12 14v6M4 12h6M14 12h6"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></symbol>
+  <symbol id="i-planeland" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M4 14l3 1 4-5-1-5 2 .5 2 6 5 1.5a1.5 1.5 0 0 1-.5 3L5 16z"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.6 4 1.8 5.4 6 6-4.2.6-5.4 1.8-6 6-.6-4.2-1.8-5.4-6-6 4.2-.6 5.4-1.8 6-6z"/></symbol>
+  <symbol id="i-run" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="5" r="2"/><path d="M14 8l-3 3 3 3 1 5M11 11l-4 1M14 14l3 1-1 4"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 13V9M9 2h6M19 6l-1.5 1.5"/></symbol>
+  <symbol id="i-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h10a4 4 0 0 1 4 4l-1 4a2.5 2.5 0 0 1-4.5 1L14 16h-4l-1.5 2A2.5 2.5 0 0 1 4 17l-1-4a4 4 0 0 1 4-4z"/><path d="M7 12v2M6 13h2M15 12h.01M17 14h.01"/></symbol>
+  <!-- mini-game -->
+  <symbol id="i-person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M12 7.5v7M8 20l4-5 4 5M9 11h6"/></symbol>
+  <symbol id="i-palm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12V6a1.3 1.3 0 0 1 2.6 0v4M9.6 10V5a1.3 1.3 0 0 1 2.6 0v5M12.2 10V5.5a1.3 1.3 0 0 1 2.6 0V11M14.8 11V7a1.3 1.3 0 0 1 2.6 0v6a5 5 0 0 1-5 5h-1a4 4 0 0 1-3-1.5L5 14a1.4 1.4 0 0 1 2-2l1.8 1.6"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 13V4a1.3 1.3 0 0 1 2.6 0v8M11.6 12V6a1.3 1.3 0 0 1 2.6 0v6"/><path d="M14.2 12V9a1.3 1.3 0 0 1 2.6 0v4a5 5 0 0 1-5 5h-1a4 4 0 0 1-3-1.5L5 14a1.4 1.4 0 0 1 2-2l2 2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-finger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a1.4 1.4 0 0 1 2.8 0v6M11.8 11V8a1.3 1.3 0 0 1 2.6 0v3M14.4 11v-1a1.3 1.3 0 0 1 2.6 0v5a5 5 0 0 1-5 5h-1a4 4 0 0 1-3-1.5L5 16a1.4 1.4 0 0 1 2-2l2 2"/></symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6"/></symbol>
+</defs></svg>
+
 <div id="scene" aria-hidden="true">
   <div class="sun"></div>
-  <div class="cloud c1">☁️</div>
-  <div class="cloud c2">☁️</div>
+  <div class="cloud c1"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cloud"/></svg></div>
+  <div class="cloud c2"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cloud"/></svg></div>
   <svg class="dunes" viewBox="0 0 1440 420" preserveAspectRatio="none">
     <path d="M0 300 Q 220 230 460 290 T 960 280 T 1440 300 V420 H0 Z" fill="#e9c987" opacity=".55"/>
     <path d="M0 350 Q 300 285 620 340 T 1180 335 T 1440 350 V420 H0 Z" fill="#e0b463" opacity=".7"/>
@@ -338,22 +416,23 @@
 
 <!-- ============ SETUP ============ -->
 <section id="setup">
-  <h1>🏜️ 出埃及大冒險</h1>
+  <div class="emblem"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-desert"/></svg></div>
+  <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-desert"/></svg> 出埃及大冒險</h1>
   <p class="subtitle">跟著摩西，從荊棘火焰一路走到紅海對岸，向耶和華歌唱。</p>
 
   <div class="setup-group">
     <h3>遊玩模式</h3>
     <div class="choice-row" id="mode-row">
-      <button data-mode="soft"><div class="c-title">🕹️ 遊戲軟體模式</div><div class="c-desc">在螢幕上玩迷你遊戲</div></button>
-      <button data-mode="land"><div class="c-title">🌳 大地遊戲模式</div><div class="c-desc">實體場地、做動作闖關</div></button>
+      <button data-mode="soft"><div class="c-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-joystick"/></svg> 遊戲軟體模式</div><div class="c-desc">在螢幕上玩迷你遊戲</div></button>
+      <button data-mode="land"><div class="c-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tree"/></svg> 大地遊戲模式</div><div class="c-desc">實體場地、做動作闖關</div></button>
     </div>
   </div>
 
   <div class="setup-group">
     <h3>進行方式</h3>
     <div class="choice-row" id="submode-row">
-      <button data-sub="host"><div class="c-title">🧑‍🏫 關主模式</div><div class="c-desc">關主主持出題、判定過關、陪你猜拳</div></button>
-      <button data-sub="vs"><div class="c-title">⚔️ 玩家對戰模式</div><div class="c-desc">指定同場玩家對戰、可換格</div></button>
+      <button data-sub="host"><div class="c-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-teacher"/></svg> 關主模式</div><div class="c-desc">關主主持出題、判定過關、陪你猜拳</div></button>
+      <button data-sub="vs"><div class="c-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-swords"/></svg> 玩家對戰模式</div><div class="c-desc">指定同場玩家對戰、可換格</div></button>
     </div>
   </div>
 
@@ -361,11 +440,11 @@
     <h3>參賽人數</h3>
     <div class="stepper-row">
       <div class="stepper" id="stepper-humans">
-        <div class="s-label">🙋 玩家</div>
+        <div class="s-label"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-handraise"/></svg> 玩家</div>
         <div class="s-ctrl"><button class="s-btn" data-who="humans" data-d="-1" aria-label="減少玩家">−</button><span class="s-val" id="humans-val">1</span><button class="s-btn" data-who="humans" data-d="1" aria-label="增加玩家">＋</button></div>
       </div>
       <div class="stepper" id="stepper-bots">
-        <div class="s-label">🤖 電腦</div>
+        <div class="s-label"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-robot"/></svg> 電腦</div>
         <div class="s-ctrl"><button class="s-btn" data-who="bots" data-d="-1" aria-label="減少電腦">−</button><span class="s-val" id="bots-val">0</span><button class="s-btn" data-who="bots" data-d="1" aria-label="增加電腦">＋</button></div>
       </div>
     </div>
@@ -382,10 +461,10 @@
 <!-- ============ GAME ============ -->
 <section id="game">
   <div class="header-bar">
-    <h2>🏜️ 出埃及大冒險</h2>
+    <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-desert"/></svg> 出埃及大冒險</h2>
     <span class="mode-tag" id="mode-tag">—</span>
-    <button class="new-game" id="mute-btn" title="音效開關" aria-label="音效開關">🔊</button>
-    <button class="new-game" id="help-btn">❓ 玩法</button>
+    <button class="new-game" id="mute-btn" title="音效開關" aria-label="音效開關"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sound"/></svg></button>
+    <button class="new-game" id="help-btn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-help"/></svg> 玩法</button>
     <button class="new-game" id="new-game-btn">重新開始</button>
   </div>
   <div id="board-wrap"><div id="board-fit"><div id="board" aria-label="遊戲地圖"></div></div></div>
@@ -421,7 +500,8 @@
 
 <!-- ============ WIN ============ -->
 <div id="win-screen" class="hidden"><div class="inner">
-  <h1>🌟 抵達應許之地！</h1>
+  <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"/></svg> 抵達應許之地！</h1>
+  <div class="win-trophy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trophy"/></svg></div>
   <div class="winner-name" id="winner-name">—</div>
   <div class="standings" id="standings"></div>
   <button id="play-again-btn">再玩一局</button>
@@ -576,7 +656,7 @@ function renderSetup(){
     rows.appendChild(row);
     const sw=row.querySelector(".swatches");
     AVATARS.forEach((a,ai)=>{
-      const el=document.createElement("div"); el.className="swatch"; el.style.background=a.hex; el.textContent=a.emoji;
+      const el=document.createElement("div"); el.className="swatch"; el.style.background=a.hex; el.style.color="#fff"; el.innerHTML=ic(EMOJI2NAME[a.emoji]||"dot");
       el.dataset.av=ai; el.dataset.row=i; el.setAttribute("role","button"); el.setAttribute("tabindex","0");
       el.title=a.name; sw.appendChild(el);
     });
@@ -614,6 +694,28 @@ document.getElementById("start-btn").addEventListener("click",()=>{
 
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
+// ---- Inline SVG icons (sprite in <body>) ----
+function ic(name,cls){return `<svg class="ic${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
+// emoji → icon name (+ optional space-separated extra classes)
+const EMOJI2NAME={
+  "🐫":"camel","🐑":"sheep","🦅":"eagle","🌵":"cactus","🤖":"robot","👾":"alien","🦾":"mech","🛸":"ufo","🧑‍🏫":"teacher",
+  "🏁":"flag","🔥":"fire","✊":"fist","🕺":"dance","🚫":"ban","📣":"megaphone","🐍":"snake","🩸":"blood","🗿":"moai",
+  "🐸":"frog","🦟":"mosquito","🪰":"fly","🐄":"cow","🔴":"boil","🧊":"ice","🦗":"locust","🚪":"door","🌑":"moon",
+  "🎴":"card","☁️":"cloud","🏇":"horse","🌊":"wave","💧":"droplet","🎉":"party","🌟":"star",
+  "🎲":"dice","❓":"help","📖":"book","🔊":"sound","🔇":"mute","🏜️":"desert","🕹️":"joystick","🌳":"tree","⚔️":"swords",
+  "🙋":"handraise","👥":"people","🎯":"target","💡":"bulb",
+  "💤":"sleep","🧘":"meditate","👣":"footprints","✅":"check","🏆":"trophy","💢":"anger","🛬":"planeland","🔄":"swap","✨":"sparkle","🏃":"run","⏱":"timer","🎮":"gamepad",
+  "🧍":"person","✋":"palm","✌️":"scissors","👆":"finger",
+  "⬆️":"arrow","⬅️":"arrow ic-rot270","⬇️":"arrow ic-rot180","➡️":"arrow ic-rot90",
+};
+const EMOJI_RE=new RegExp(Object.keys(EMOJI2NAME).sort((a,b)=>b.length-a.length).map(e=>e.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|"),"g");
+// escape text, then swap any known emoji for its inline icon
+function emo(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
+    .replace(EMOJI_RE,e=>{const v=EMOJI2NAME[e];if(!v)return e;const sp=v.indexOf(" ");return sp<0?ic(v):ic(v.slice(0,sp),v.slice(sp+1));});
+}
+function avIcon(p,cls){return ic(EMOJI2NAME[p.emoji]||EMOJI2NAME[p.av&&p.av.emoji]||"dot",cls);}
+
 // ============================================================
 // Start
 // ============================================================
@@ -632,7 +734,7 @@ async function startGame(players){
   document.getElementById("game").classList.add("active");
   document.getElementById("win-screen").classList.add("hidden");
   document.getElementById("mode-tag").textContent=`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`;
-  const dice=document.getElementById("dice"); dice.textContent="🎲"; dice.removeAttribute("aria-label");
+  const dice=document.getElementById("dice"); dice.innerHTML=ic("dice"); dice.removeAttribute("aria-label");
   renderBoard(); renderPlayers(); renderLog();
   pushLog(`🎲 出場順序：${players.map(p=>`${p.av.emoji}${p.name}(${p._roll})`).join(" → ")}`);
   updateTurnUI();
@@ -660,7 +762,7 @@ function renderBoard(){
     el.dataset.idx=i; el.style.left=POS[i][0]+"px"; el.style.top=POS[i][1]+"px";
     el.setAttribute("role","button"); el.setAttribute("tabindex","0");
     el.title=`${tile.n}. ${tile.name}`;
-    el.innerHTML=`<span class="idx">${tile.n}</span><span class="icon">${tile.icon}</span><span class="label">${escapeHtml(tile.name)}</span><div class="tokens" data-idx="${i}"></div>`;
+    el.innerHTML=`<span class="idx">${tile.n}</span><span class="icon">${ic(EMOJI2NAME[tile.icon]||"dot")}</span><span class="label">${escapeHtml(tile.name)}</span><div class="tokens" data-idx="${i}"></div>`;
     board.appendChild(el);
   });
   renderTokens(); fitBoard();
@@ -679,7 +781,7 @@ function renderTokens(){
   document.querySelectorAll(".tokens").forEach(el=>el.innerHTML="");
   state.players.forEach(p=>{
     const slot=document.querySelector(`.tokens[data-idx="${p.pos}"]`); if(!slot)return;
-    const tok=document.createElement("div"); tok.className="token"; tok.style.background=p.av.hex; tok.textContent=p.av.emoji; tok.title=p.name; slot.appendChild(tok);
+    const tok=document.createElement("div"); tok.className="token"; tok.style.background=p.av.hex; tok.style.color="#fff"; tok.innerHTML=avIcon(p); tok.title=p.name; slot.appendChild(tok);
   });
   document.querySelectorAll(".tile").forEach(el=>el.classList.remove("current"));
   const cur=currentPlayer(); if(cur){const t=document.querySelector(`.tile[data-idx="${cur.pos}"]`); if(t)t.classList.add("current");}
@@ -688,7 +790,7 @@ function renderPlayers(){
   const list=document.getElementById("players-list"); list.innerHTML="";
   if(hasReferee()){
     const ref=document.createElement("div"); ref.className="referee-chip";
-    ref.innerHTML=`<span class="ref-av">🧑‍🏫</span><div><div class="name">關主（裁判）</div><div class="stats">主持本局・出題與猜拳，不繞圈競賽</div></div>`;
+    ref.innerHTML=`<span class="ref-av">${ic("teacher")}</span><div><div class="name">關主（裁判）</div><div class="stats">主持本局・出題與猜拳，不繞圈競賽</div></div>`;
     list.appendChild(ref);
   }
   state.players.forEach((p,i)=>{
@@ -696,7 +798,7 @@ function renderPlayers(){
     card.className="player-card"+(i===state.turnIdx?" active":"")+(p.skipTurns>0?" skipping":"");
     card.dataset.pid=p.id; card.setAttribute("role","button"); card.setAttribute("tabindex","0");
     const tile=BOARD[p.pos];
-    card.innerHTML=`<div class="av" style="background:${p.av.hex}">${p.av.emoji}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站</div></div>`;
+    card.innerHTML=`<div class="av" style="background:${p.av.hex};color:#fff">${avIcon(p)}</div><div><div class="name">${escapeHtml(p.name)}</div><div class="stats">第 ${tile.n} 站</div></div>`;
     list.appendChild(card);
   });
 }
@@ -708,7 +810,7 @@ document.getElementById("board").addEventListener("keydown",e=>{if(e.key!=="Ente
 // Log / turn
 // ============================================================
 function pushLog(msg,cls){state.log.unshift({msg,cls});if(state.log.length>40)state.log.pop();renderLog();}
-function renderLog(){document.getElementById("log").innerHTML=state.log.slice(0,12).map(e=>`<div class="entry ${e.cls||""}">${escapeHtml(e.msg)}</div>`).join("");}
+function renderLog(){document.getElementById("log").innerHTML=state.log.slice(0,12).map(e=>`<div class="entry ${e.cls||""}">${emo(e.msg)}</div>`).join("");}
 function currentPlayer(){return state.players[state.turnIdx];}
 function updateTurnUI(){
   renderPlayers(); renderTokens();
@@ -756,7 +858,7 @@ const SFX={
   toggleMute(){ this.muted=!this.muted; try{localStorage.setItem("exodusMuted",this.muted?"1":"0");}catch(e){} return this.muted; }
 };
 ["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{SFX.init();SFX.resume();}));
-function poof(parent,x,y){ if(!parent)return; const s=document.createElement("span"); s.className="poof"; s.textContent="✨"; s.style.left=x+"px"; s.style.top=y+"px"; parent.appendChild(s); setTimeout(()=>s.remove(),520); }
+function poof(parent,x,y){ if(!parent)return; const s=document.createElement("span"); s.className="poof"; s.innerHTML=ic("sparkle"); s.style.left=x+"px"; s.style.top=y+"px"; parent.appendChild(s); setTimeout(()=>s.remove(),520); }
 
 // ============================================================
 // Roll & move
@@ -871,23 +973,23 @@ function taskModal(p,tile,plan,opts){
   opts=opts||{};
   return new Promise(resolve=>{
     state.taskPlan={p,tile,plan};
-    document.getElementById("task-icon").textContent=tile.icon;
+    document.getElementById("task-icon").innerHTML=ic(EMOJI2NAME[tile.icon]||"dot");
     document.getElementById("task-title").textContent=`${tile.n}. ${tile.name}`;
     document.getElementById("task-sub").textContent=(tile.sub?tile.sub+" · ":"")+`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`;
-    document.getElementById("task-text").textContent=plan.text;
+    document.getElementById("task-text").innerHTML=emo(plan.text);
     const back=document.getElementById("task-backdrop");
     const controls=document.getElementById("task-controls"); controls.innerHTML="";
     const stage=document.getElementById("task-stage"); stage.classList.add("hidden"); stage.innerHTML="";
     back.classList.remove("hidden");
     SFX.resume(); SFX.pop();
-    const setText=s=>document.getElementById("task-text").textContent=s;
+    const setText=s=>document.getElementById("task-text").innerHTML=emo(s);
     const done=()=>{back.classList.add("hidden");controls.innerHTML="";stage.classList.add("hidden");stage.innerHTML="";state.taskPlan=null;resolve();};
     // await a single button press
-    const button=(label,cls)=>new Promise(res=>{controls.innerHTML="";const b=document.createElement("button");b.className=cls||"good";b.textContent=label;b.onclick=res;controls.appendChild(b);b.focus&&b.focus();});
+    const button=(label,cls)=>new Promise(res=>{controls.innerHTML="";const b=document.createElement("button");b.className=cls||"good";b.innerHTML=emo(label);b.onclick=res;controls.appendChild(b);b.focus&&b.focus();});
     // await one of several choices, resolving to its value
-    const choice=list=>new Promise(res=>{controls.innerHTML="";list.forEach(o=>{const b=document.createElement("button");b.className=o.cls||"good";b.textContent=o.label;b.onclick=()=>res(o.val);controls.appendChild(b);});});
+    const choice=list=>new Promise(res=>{controls.innerHTML="";list.forEach(o=>{const b=document.createElement("button");b.className=o.cls||"good";b.innerHTML=emo(o.label);b.onclick=()=>res(o.val);controls.appendChild(b);});});
     // await opponent selection
-    const pickOpp=()=>new Promise(res=>{controls.innerHTML="";const wrap=document.createElement("div");wrap.className="opp-list";state.players.filter(o=>o.id!==p.id).forEach(o=>{const b=document.createElement("button");b.innerHTML=`<span>${o.av.emoji} ${escapeHtml(o.name)}</span><span>第 ${BOARD[o.pos].n} 站</span>`;b.onclick=()=>res(o);wrap.appendChild(b);});controls.appendChild(wrap);});
+    const pickOpp=()=>new Promise(res=>{controls.innerHTML="";const wrap=document.createElement("div");wrap.className="opp-list";state.players.filter(o=>o.id!==p.id).forEach(o=>{const b=document.createElement("button");b.innerHTML=`<span>${avIcon(o)} ${escapeHtml(o.name)}</span><span>第 ${BOARD[o.pos].n} 站</span>`;b.onclick=()=>res(o);wrap.appendChild(b);});controls.appendChild(wrap);});
     const doSwap=(a,b)=>{const t=a.pos;a.pos=b.pos;b.pos=t;renderTokens();renderPlayers();SFX.swap();pushLog(`🔄 ${a.name} 與 ${b.name} 互換了格子。`);};
 
     (async()=>{
@@ -1057,14 +1159,14 @@ function countdown(stage,secs,label){
     state.miniCleanup=()=>clearInterval(iv);
   });
 }
-function spawnTargets(stage,done,emoji,K,move){
+function spawnTargets(stage,done,iconName,K,move,color){
   let left=K,start=Date.now();
   stage.innerHTML=`<div class="mini-field"></div><div class="mini-progress">剩 ${left} 隻</div>`;
   const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress"),tgs=[];
   const W=()=>Math.max(10,field.clientWidth-44),H=()=>Math.max(10,field.clientHeight-44);
   let iv=null;
   for(let i=0;i<K;i++){
-    const f=document.createElement("button"); f.className="mini-target"; f.textContent=emoji;
+    const f=document.createElement("button"); f.className="mini-target"; f.innerHTML=ic(iconName); if(color)f.style.color=color;
     f.style.left=(Math.random()*W())+"px"; f.style.top=(Math.random()*H())+"px"; field.appendChild(f); tgs.push(f);
     f.addEventListener("click",()=>{ if(f._dead)return; f._dead=true; poof(field,parseFloat(f.style.left)+8,parseFloat(f.style.top)+8); SFX.pop(); f.remove(); left--; prog.textContent=`剩 ${left} 隻`;
       if(left<=0){ if(iv)clearInterval(iv); done(Math.max(50,18000-(Date.now()-start))); } });
@@ -1077,20 +1179,20 @@ function spawnTargets(stage,done,emoji,K,move){
 const MINIGAMES={
   tap30:{mount(stage,done){
     let n=0,start=Date.now();
-    stage.innerHTML=`<div class="mini-tap">快速點我！<span class="cnt" style="font-size:16px">0 / 30</span></div>`;
+    stage.innerHTML=`<div class="mini-tap">快速點我！<span class="cnt" style="font-size:16px">0 / 30</span><span class="tap-finger">${ic("finger")}</span></div>`;
     const el=stage.querySelector(".mini-tap"),cnt=el.querySelector(".cnt");
     el.addEventListener("click",()=>{ n++; cnt.textContent=n+" / 30"; if(n>=30)done(Math.max(50,12000-(Date.now()-start))); });
   }},
-  frogs:{mount(stage,done){ return spawnTargets(stage,done,"🐸",7,false); }},
-  flies:{mount(stage,done){ return spawnTargets(stage,done,"🪰",6,true); }},
+  frogs:{mount(stage,done){ return spawnTargets(stage,done,"frog",7,false,"#3f9a4a"); }},
+  flies:{mount(stage,done){ return spawnTargets(stage,done,"fly",6,true,"#444"); }},
   dance:{mount(stage,done){
     const dirs={ArrowUp:"⬆️",ArrowLeft:"⬅️",ArrowDown:"⬇️",ArrowRight:"➡️"};
     const keys=Object.keys(dirs), seq=Array.from({length:8},()=>keys[Math.floor(Math.random()*4)]);
     let i=0,correct=0,start=Date.now();
     stage.innerHTML=`<div class="mini-dance"><div class="arrow"></div><div class="mini-progress">0 / ${seq.length}</div><div class="pad"></div></div>`;
     const arrowEl=stage.querySelector(".arrow"),prog=stage.querySelector(".mini-progress"),pad=stage.querySelector(".pad");
-    keys.forEach(k=>{const b=document.createElement("button");b.textContent=dirs[k];b.onclick=()=>hit(k);pad.appendChild(b);});
-    function render(){ arrowEl.textContent=dirs[seq[i]]; prog.textContent=i+" / "+seq.length; }
+    keys.forEach(k=>{const b=document.createElement("button");b.innerHTML=emo(dirs[k]);b.onclick=()=>hit(k);pad.appendChild(b);});
+    function render(){ arrowEl.innerHTML=emo(dirs[seq[i]]); prog.textContent=i+" / "+seq.length; }
     function hit(k){ if(i>=seq.length)return; if(k===seq[i])correct++; i++;
       if(i>=seq.length){ document.removeEventListener("keydown",onKey); done(Math.max(50,correct*1500-Math.floor((Date.now()-start)/20))); } else render(); }
     function onKey(e){ if(dirs[e.key]){ e.preventDefault(); hit(e.key); } }
@@ -1107,13 +1209,13 @@ const MINIGAMES={
   dodge:{mount(stage,done){
     stage.innerHTML='<div class="mini-field" style="height:230px"></div><div class="mini-progress">移動滑鼠/手指左右閃避落下的冰雹與火！</div>';
     const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
-    const guy=document.createElement("div"); guy.className="mini-guy"; guy.textContent="🧍"; field.appendChild(guy);
+    const guy=document.createElement("div"); guy.className="mini-guy"; guy.innerHTML=ic("person"); field.appendChild(guy);
     let gx=0; const setGuy=x=>{ gx=Math.max(15,Math.min(field.clientWidth-15,x)); guy.style.left=gx+"px"; };
     setGuy(field.clientWidth/2);
     field.addEventListener("pointermove",e=>{ const r=field.getBoundingClientRect(); setGuy(e.clientX-r.left); });
     let hits=0,spawned=0; const N=14, active=[];
     const sp=setInterval(()=>{ if(spawned>=N){clearInterval(sp);return;} spawned++;
-      const o=document.createElement("div"); o.className="mini-drop"; o.textContent=Math.random()<.5?"🧊":"🔥";
+      const isIce=Math.random()<.5; const o=document.createElement("div"); o.className="mini-drop"; o.innerHTML=ic(isIce?"ice":"fire"); o.style.color=isIce?"#5bb6dd":"#e8722e";
       const x=Math.random()*(field.clientWidth-22); o.style.left=x+"px"; o.style.top="-24px"; field.appendChild(o);
       active.push({el:o,x:x+11,y:-24,dead:false}); },420);
     const tick=setInterval(()=>{ const guyY=field.clientHeight-26;
@@ -1128,7 +1230,7 @@ const MINIGAMES={
     const K=8; let left=K,start=Date.now();
     stage.innerHTML='<div class="mini-field" style="height:210px"></div><div class="mini-progress">按住並來回「擦拭」消除疹子（剩 '+left+'）</div>';
     const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
-    for(let i=0;i<K;i++){ const s=document.createElement("div"); s.className="mini-rash"; s.textContent="🔴";
+    for(let i=0;i<K;i++){ const s=document.createElement("div"); s.className="mini-rash"; s.innerHTML=ic("boil"); s.style.color="#d12f2f";
       s.style.left=(Math.random()*(field.clientWidth-30))+"px"; s.style.top=(Math.random()*(field.clientHeight-30))+"px"; field.appendChild(s); }
     let down=false;
     const rub=e=>{ if(!down)return; const r=field.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
@@ -1156,7 +1258,7 @@ const MINIGAMES={
     stage.innerHTML='<div class="mini-sea" style="position:relative;height:'+H+'px;border-radius:12px;overflow:hidden;background:linear-gradient(#6ec1e4 0 26%,#f3e3b8 26% 74%,#6ec1e4 74% 100%)"></div><div class="mini-progress">把人一個個從左拖到右側乾路盡頭，別碰到上下海水（碰到扣分）。剩 '+people+' 人</div>';
     const sea=stage.querySelector(".mini-sea"),prog=stage.querySelector(".mini-progress");
     function spawn(){ if(people<=0){ done({score:Math.max(50,2000-touches*150),penalty:touches}); return; }
-      cur=document.createElement("div"); cur.className="mini-person"; cur.textContent="🧍"; cur.style.left="6px"; cur.style.top=(H/2-15)+"px"; sea.appendChild(cur); }
+      cur=document.createElement("div"); cur.className="mini-person"; cur.innerHTML=ic("person"); cur.style.left="6px"; cur.style.top=(H/2-15)+"px"; sea.appendChild(cur); }
     const up=()=>drag=false;
     sea.addEventListener("pointerdown",e=>{ if(e.target===cur)drag=true; });
     document.addEventListener("pointerup",up);
@@ -1187,9 +1289,9 @@ const MINIGAMES={
   arrange:{mount(stage,done){
     const goal="☁️🧍🔥"; let items; do{ items=shuffle(["☁️","🧍","🔥"]); }while(items.join("")===goal);
     let sel=-1;
-    stage.innerHTML='<div class="mini-arrange"></div><div class="mini-progress">點兩個格子互換，排成「☁️ － 🧍 － 🔥」。</div>';
+    stage.innerHTML='<div class="mini-arrange"></div><div class="mini-progress">點兩個格子互換，排成「'+ic("cloud")+' － '+ic("person")+' － '+ic("fire")+'」。</div>';
     const box=stage.querySelector(".mini-arrange");
-    function render(){ box.innerHTML=""; items.forEach((it,i)=>{ const b=document.createElement("button"); b.className="mini-slot"+(sel===i?" sel":""); b.textContent=it; b.onclick=()=>pick(i); box.appendChild(b); }); }
+    function render(){ box.innerHTML=""; items.forEach((it,i)=>{ const b=document.createElement("button"); b.className="mini-slot"+(sel===i?" sel":""); b.innerHTML=emo(it); b.onclick=()=>pick(i); box.appendChild(b); }); }
     function pick(i){ if(sel<0){sel=i;render();return;} if(sel===i){sel=-1;render();return;} const t=items[sel];items[sel]=items[i];items[i]=t;sel=-1;render(); if(items.join("")===goal)setTimeout(()=>done({score:1000}),250); }
     function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
     render();
@@ -1201,11 +1303,11 @@ const MINIGAMES={
   }},
   palm:{mount(stage,done){
     let score=0,penalty=0,shown=0; const N=12;
-    stage.innerHTML='<div class="mini-field" style="height:200px"></div><div class="mini-progress">點「✋」、別點「✊」（誤點扣分）。命中 0 / 誤點 0</div>';
+    stage.innerHTML='<div class="mini-field" style="height:200px"></div><div class="mini-progress">點「'+ic("palm")+'」、別點「'+ic("fist")+'」（誤點扣分）。命中 0 / 誤點 0</div>';
     const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
-    const upd=()=>prog.textContent="點 ✋、別點 ✊。命中 "+score+" / 誤點 "+penalty;
+    const upd=()=>prog.innerHTML="點 "+ic("palm")+"、別點 "+ic("fist")+"。命中 "+score+" / 誤點 "+penalty;
     const iv=setInterval(()=>{ if(shown>=N){ clearInterval(iv); setTimeout(()=>done({score:Math.max(50,score*300-penalty*150+600),penalty}),350); return; } shown++;
-      const isPalm=Math.random()<.6; const b=document.createElement("button"); b.className="mini-target"; b.textContent=isPalm?"✋":"✊";
+      const isPalm=Math.random()<.6; const b=document.createElement("button"); b.className="mini-target"; b.innerHTML=ic(isPalm?"palm":"fist");
       b.style.left=(Math.random()*(field.clientWidth-44))+"px"; b.style.top=(Math.random()*(field.clientHeight-44))+"px"; field.appendChild(b);
       b.addEventListener("click",()=>{ if(b._u)return; b._u=true; if(isPalm)score++; else penalty++; upd(); b.remove(); });
       setTimeout(()=>{ if(!b._u){ b._u=true; b.remove(); } },950);
@@ -1218,10 +1320,10 @@ const MINIGAMES={
 // Inspect modals
 // ============================================================
 function openInfo(icon,title,sub,text){
-  document.getElementById("info-icon").textContent=icon;
+  document.getElementById("info-icon").innerHTML=emo(icon);
   document.getElementById("info-title").textContent=title;
-  document.getElementById("info-sub").textContent=sub||"";
-  document.getElementById("info-text").textContent=text||"";
+  document.getElementById("info-sub").innerHTML=emo(sub||"");
+  document.getElementById("info-text").innerHTML=emo(text||"");
   state.infoPrev=document.activeElement;
   document.getElementById("info-backdrop").classList.remove("hidden");
   document.getElementById("info-close").focus();
@@ -1290,9 +1392,9 @@ function win(winner){
   playCheer();
   launchConfetti();
   pushLog(winner.isBot?`🤖 ${winner.av.emoji}${winner.name} 搶先抵達終點，玩家們再接再厲！`:`🌟 ${winner.av.emoji}${winner.name} 抵達終點，向耶和華歌唱！`,"hi");
-  document.getElementById("winner-name").textContent=`${winner.av.emoji} ${winner.name}`;
+  document.getElementById("winner-name").innerHTML=`${avIcon(winner)} ${escapeHtml(winner.name)}`;
   const sorted=[...state.players].sort((a,b)=>{if(a.id===winner.id)return -1;if(b.id===winner.id)return 1;return b.pos-a.pos;});
-  document.getElementById("standings").innerHTML=sorted.map((p,i)=>`<div class="row"><span><strong>${i+1}.</strong> ${p.av.emoji} ${escapeHtml(p.name)}</span><span>第 ${BOARD[p.pos].n} 站</span></div>`).join("");
+  document.getElementById("standings").innerHTML=sorted.map((p,i)=>`<div class="row"><span><strong>${i+1}.</strong> ${avIcon(p)} ${escapeHtml(p.name)}</span><span>第 ${BOARD[p.pos].n} 站</span></div>`).join("");
   document.getElementById("win-screen").classList.remove("hidden");
 }
 
@@ -1329,7 +1431,7 @@ document.getElementById("play-again-btn").addEventListener("click",backToSetup);
 // ============================================================
 SFX.init();
 const _muteBtn=document.getElementById("mute-btn");
-function refreshMute(){ if(_muteBtn) _muteBtn.textContent=SFX.muted?"🔇":"🔊"; }
+function refreshMute(){ if(_muteBtn) _muteBtn.innerHTML=ic(SFX.muted?"mute":"sound"); }
 if(_muteBtn) _muteBtn.addEventListener("click",()=>{ SFX.init(); const m=SFX.toggleMute(); refreshMute(); if(!m){SFX.resume();SFX.tick();} });
 refreshMute();
 renderSetup();
