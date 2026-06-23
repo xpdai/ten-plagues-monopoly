@@ -764,6 +764,7 @@ async function startGame(players){
   renderBoard(); renderPlayers(); renderLog();
   pushLog(`🎲 出場順序：${players.map(p=>`${p.av.emoji}${p.name}(${p._roll})`).join(" → ")}`);
   updateTurnUI();
+  BGM.start();
 }
 
 // ============================================================
@@ -884,6 +885,39 @@ const SFX={
   toggleMute(){ this.muted=!this.muted; try{localStorage.setItem("exodusMuted",this.muted?"1":"0");}catch(e){} return this.muted; }
 };
 ["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{SFX.init();SFX.resume();}));
+
+// Light, cheerful looping BGM — synthesised (no audio files), shares the mute toggle.
+const BGM={
+  on:false, timer:null, next:0, step:0, master:null,
+  // 4-bar I–V–vi–IV (C–G–Am–F); melody = 1 note per 2 steps, 32 steps total
+  M:[329.63,392.00,523.25,392.00, 293.66,392.00,493.88,392.00, 261.63,329.63,440.00,329.63, 261.63,349.23,440.00,349.23],
+  ROOT:[130.81,98.00,110.00,87.31],
+  CH:[[261.63,329.63,392.00],[196.00,246.94,392.00],[220.00,261.63,329.63],[174.61,220.00,349.23]],
+  start(){
+    if((navigator.webdriver&&!window.FORCE_BGM)||this.on)return;
+    if(!document.getElementById("game").classList.contains("active"))return;
+    SFX.init(); SFX.resume(); if(!SFX.ctx)return;
+    this.on=true; this.master=SFX.ctx.createGain(); this.master.gain.value=0; this.master.connect(SFX.ctx.destination);
+    this.next=SFX.ctx.currentTime+0.12; this.step=0; this.setVol(); this._tick();
+  },
+  stop(){ this.on=false; if(this.timer){clearTimeout(this.timer);this.timer=null;} if(this.master){try{this.master.disconnect();}catch(e){} this.master=null;} },
+  setVol(){ if(this.master&&SFX.ctx) this.master.gain.setTargetAtTime(SFX.muted?0:0.9, SFX.ctx.currentTime, 0.08); },
+  _n(f,t,d,type,v){ const o=SFX.ctx.createOscillator(),g=SFX.ctx.createGain(); o.type=type; o.frequency.value=f; o.connect(g); g.connect(this.master);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.start(t); o.stop(t+d+0.03); },
+  _tick(){
+    if(!this.on||!SFX.ctx)return;
+    const SPB=0.26, ahead=SFX.ctx.currentTime+0.4;
+    while(this.next<ahead){
+      const s=this.step%32, bar=(s/8)|0, beat=s%8;
+      if(s%2===0) this._n(this.M[s/2],this.next,SPB*1.7,"triangle",0.075);
+      if(beat===0||beat===4) this._n(this.ROOT[bar],this.next,SPB*1.5,"sine",0.09);
+      if(beat===0) this.CH[bar].forEach(f=>this._n(f,this.next,SPB*7.4,"triangle",0.022));
+      if(beat%2===1) this._n(2093,this.next,0.05,"square",0.012); // soft off-beat shaker
+      this.next+=SPB; this.step++;
+    }
+    this.timer=setTimeout(()=>this._tick(),110);
+  }
+};
 function poof(parent,x,y){ if(!parent)return; const s=document.createElement("span"); s.className="poof"; s.innerHTML=ic("sparkle"); s.style.left=x+"px"; s.style.top=y+"px"; parent.appendChild(s); setTimeout(()=>s.remove(),520); }
 
 // ============================================================
@@ -1428,7 +1462,7 @@ function win(winner){
 // New game
 // ============================================================
 function backToSetup(){
-  stopConfetti();
+  stopConfetti(); BGM.stop();
   document.getElementById("game").classList.remove("active");
   document.getElementById("setup").style.display="block";
   document.getElementById("win-screen").classList.add("hidden");
@@ -1458,7 +1492,7 @@ document.getElementById("play-again-btn").addEventListener("click",backToSetup);
 SFX.init();
 const _muteBtn=document.getElementById("mute-btn");
 function refreshMute(){ if(_muteBtn) _muteBtn.innerHTML=ic(SFX.muted?"mute":"sound"); }
-if(_muteBtn) _muteBtn.addEventListener("click",()=>{ SFX.init(); const m=SFX.toggleMute(); refreshMute(); if(!m){SFX.resume();SFX.tick();} });
+if(_muteBtn) _muteBtn.addEventListener("click",()=>{ SFX.init(); const m=SFX.toggleMute(); refreshMute(); if(!m){SFX.resume();SFX.tick();BGM.start();} BGM.setVol(); });
 refreshMute();
 renderSetup();
 </script>
