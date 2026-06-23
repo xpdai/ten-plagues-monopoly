@@ -760,7 +760,7 @@ async function startGame(players){
   document.getElementById("game").classList.add("active");
   document.getElementById("win-screen").classList.add("hidden");
   document.getElementById("mode-tag").textContent=`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`;
-  const dice=document.getElementById("dice"); dice.innerHTML=ic("dice"); dice.removeAttribute("aria-label");
+  renderDie(1); // dice rests on a real pip-face 1 until first roll
   renderBoard(); renderPlayers(); renderLog();
   pushLog(`🎲 出場順序：${players.map(p=>`${p.av.emoji}${p.name}(${p._roll})`).join(" → ")}`);
   updateTurnUI();
