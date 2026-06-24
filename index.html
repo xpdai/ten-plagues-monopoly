@@ -137,6 +137,7 @@
   #board-fit{position:relative;margin:0 auto;}
   #board{position:relative;width:860px;height:540px;transform-origin:top left;}
   #board .road{position:absolute;inset:0;z-index:0;pointer-events:none;}
+  #board .stars{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.85;filter:drop-shadow(0 1px 1px rgba(120,84,40,.25));}
   #board .decor{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;}
   .tile.done{opacity:.62;filter:saturate(.65);}
   .tile.done.current{opacity:1;filter:none;}
@@ -330,6 +331,12 @@
     .roll-btn{padding:18px;font-size:22px;}
     .mini-dance .pad{grid-template-columns:repeat(4,60px);}
     .mini-arrange .mini-slot{width:72px;height:72px;}
+  }
+  @media (max-width:560px){
+    /* Candy-Crush vertical map: tall board scrolls inside a fixed viewport */
+    #board-wrap{max-height:74vh;overflow-y:auto;overflow-x:hidden;}
+    #board .stars{opacity:.95;}
+    .tile .idx{width:23px;height:23px;font-size:12px;}
   }
   @media (max-width:480px){
     #board-wrap{padding:8px;}
@@ -701,19 +708,36 @@ const SCRIPTURE={
   25:"出埃及記 14:30-31", 26:"出埃及記 15:1-2",
 };
 
-// Winding path coordinates for 26 tiles (serpentine, bottom → top).
-const POS=(function(){
-  const n=BOARD.length, cols=7, mX=70, mY=80, W=860, H=540;
-  const uW=W-2*mX, uH=H-2*mY, rows=Math.ceil(n/cols), pts=[];
-  for(let i=0;i<n;i++){
-    const row=Math.floor(i/cols); let col=i%cols;
-    if(row%2===1) col=cols-1-col;
-    const x=mX+(cols>1?uW*col/(cols-1):uW/2);
-    const y=H-mY-(rows>1?uH*row/(rows-1):0);
-    pts.push([Math.round(x),Math.round(y+((i%2)?-10:10))]);
+// Winding path coordinates. Two layouts:
+//  • desktop / wide  → 7-column serpentine, landscape 860×540 (scaled to fit width)
+//  • phone / narrow  → tall vertical "snake" you scroll down, Candy-Crush style
+let POS=[], BOARD_W=860, BOARD_H=540, LAYOUT_MOBILE=false;
+function isMobileLayout(){ return !!(window.matchMedia && window.matchMedia("(max-width:560px)").matches); }
+function computeLayout(){
+  const n=BOARD.length;
+  LAYOUT_MOBILE=isMobileLayout();
+  if(LAYOUT_MOBILE){
+    const W=360, vGap=108, topM=86, botM=96;
+    const H=botM+(n-1)*vGap+topM, cx=W/2, amp=W/2-60, pts=[];
+    for(let i=0;i<n;i++){
+      const y=H-botM-i*vGap;                 // index 0 at bottom, goal scrolls up
+      const x=cx+amp*Math.sin(i*0.82);       // gentle left/right snake
+      pts.push([Math.round(x),Math.round(y)]);
+    }
+    POS=pts; BOARD_W=W; BOARD_H=H;
+  }else{
+    const cols=7, mX=70, mY=80, W=860, H=540, uW=W-2*mX, uH=H-2*mY, rows=Math.ceil(n/cols), pts=[];
+    for(let i=0;i<n;i++){
+      const row=Math.floor(i/cols); let col=i%cols;
+      if(row%2===1) col=cols-1-col;
+      const x=mX+(cols>1?uW*col/(cols-1):uW/2);
+      const y=H-mY-(rows>1?uH*row/(rows-1):0);
+      pts.push([Math.round(x),Math.round(y+((i%2)?-10:10))]);
+    }
+    POS=pts; BOARD_W=W; BOARD_H=H;
   }
-  return pts;
-})();
+}
+computeLayout();
 
 const MODE_LABEL={soft:"遊戲軟體模式",land:"大地遊戲模式"};
 const SUB_LABEL={host:"關主模式",vs:"玩家對戰模式"};
@@ -929,10 +953,24 @@ const DECOR_SVG=`<svg class="decor" viewBox="0 0 860 540" aria-hidden="true">
   <use href="#i-camel" x="396" y="104" width="58" height="58"/>
   <use href="#i-cactus" x="196" y="232" width="44" height="44"/>
 </svg>`;
+// little 3-star clusters between nodes, Candy-Crush flavour
+function starsSVG(){
+  let s=`<svg class="stars" viewBox="0 0 ${BOARD_W} ${BOARD_H}" preserveAspectRatio="none" aria-hidden="true">`;
+  const star=(x,y,r)=>{ let p=""; for(let k=0;k<5;k++){ const a=-Math.PI/2+k*2*Math.PI/5, a2=a+Math.PI/5;
+      p+=(k?"L":"M")+(x+r*Math.cos(a)).toFixed(1)+" "+(y+r*Math.sin(a)).toFixed(1)+"L"+(x+r*0.42*Math.cos(a2)).toFixed(1)+" "+(y+r*0.42*Math.sin(a2)).toFixed(1); }
+    return `<path d="${p}Z" fill="#ffd34d" stroke="#e7a92c" stroke-width="1" stroke-linejoin="round"/>`; };
+  for(let i=0;i<POS.length-1;i++){
+    const mx=(POS[i][0]+POS[i+1][0])/2, my=(POS[i][1]+POS[i+1][1])/2;
+    s+=star(mx-13,my+3,4.5)+star(mx,my-3,6)+star(mx+13,my+3,4.5);
+  }
+  return s+`</svg>`;
+}
 function renderBoard(){
   const board=document.getElementById("board"); board.innerHTML="";
-  board.insertAdjacentHTML("beforeend",`<svg class="road" viewBox="0 0 860 540" preserveAspectRatio="none" aria-hidden="true"><path class="road-edge" d="${roadPath(POS)}"/><path class="road-base" d="${roadPath(POS)}"/><path class="road-dash" d="${roadPath(POS)}"/></svg>`);
-  board.insertAdjacentHTML("beforeend",DECOR_SVG);
+  board.style.width=BOARD_W+"px"; board.style.height=BOARD_H+"px";
+  board.insertAdjacentHTML("beforeend",`<svg class="road" viewBox="0 0 ${BOARD_W} ${BOARD_H}" preserveAspectRatio="none" aria-hidden="true"><path class="road-edge" d="${roadPath(POS)}"/><path class="road-base" d="${roadPath(POS)}"/><path class="road-dash" d="${roadPath(POS)}"/></svg>`);
+  board.insertAdjacentHTML("beforeend",starsSVG());
+  if(!LAYOUT_MOBILE) board.insertAdjacentHTML("beforeend",DECOR_SVG);
   BOARD.forEach((tile,i)=>{
     const el=document.createElement("div");
     el.className="tile "+(tile.cls||"");
@@ -949,11 +987,22 @@ function fitBoard(){
   if(!wrap||!fit||!board)return;
   const cs=getComputedStyle(wrap),avail=wrap.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
   if(avail<=0)return;
-  let s=Math.min(1,avail/860);
-  if(window.matchMedia&&window.matchMedia("(max-width:480px)").matches)s=Math.max(s,0.6);
-  board.style.transform=s<1?`scale(${s})`:"none"; fit.style.width=(860*s)+"px"; fit.style.height=(540*s)+"px";
+  // phone: fill the width exactly (tall board scrolls vertically); desktop: scale to fit, never up
+  const s=LAYOUT_MOBILE?avail/BOARD_W:Math.min(1,avail/BOARD_W);
+  board.style.transform=`scale(${s})`; fit.style.width=(BOARD_W*s)+"px"; fit.style.height=(BOARD_H*s)+"px";
 }
-window.addEventListener("resize",fitBoard);
+// keep the current player's node in view on the tall phone board
+function scrollToCurrent(){
+  if(!LAYOUT_MOBILE)return; const wrap=document.getElementById("board-wrap"); const cur=currentPlayer(); if(!wrap||!cur)return;
+  const t=document.querySelector(`.tile[data-idx="${cur.pos}"]`); if(!t)return;
+  const top=t.offsetParent?t.getBoundingClientRect().top-wrap.getBoundingClientRect().top+wrap.scrollTop:0;
+  wrap.scrollTo({top:Math.max(0,top-wrap.clientHeight/2),behavior:"smooth"});
+}
+window.addEventListener("resize",()=>{
+  const was=LAYOUT_MOBILE; computeLayout();
+  if(LAYOUT_MOBILE!==was && document.getElementById("game").classList.contains("active")) renderBoard();
+  else fitBoard();
+});
 function renderTokens(){
   document.querySelectorAll(".tokens").forEach(el=>el.innerHTML="");
   state.players.forEach(p=>{
@@ -996,6 +1045,7 @@ function updateTurnUI(){
   const p=currentPlayer();
   document.getElementById("turn-name").innerHTML=p?`輪到 ${avIcon(p)} ${escapeHtml(p.name)}`:"—";
   document.getElementById("roll-btn").disabled=state.busy||!!(p&&p.isBot);
+  scrollToCurrent();
   persist();
 }
 function advanceTurn(){state.turnIdx=(state.turnIdx+1)%state.players.length;updateTurnUI();maybeBotTurn();}
