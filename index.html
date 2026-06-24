@@ -326,6 +326,12 @@
   img.ic{user-select:none;-webkit-user-drag:none;}
   .credit{text-align:center;font-size:11px;color:var(--ink-soft);margin:14px 0 0;}
   .credit a{color:var(--teal-deep);}
+  #resume-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;
+    background:linear-gradient(180deg,#fff6df,#ffeec2);border:2.5px solid var(--sand-deep);border-radius:16px;padding:12px 14px;margin-bottom:18px;}
+  #resume-bar .resume-txt{font-size:13.5px;color:var(--ink);display:flex;flex-direction:column;gap:2px;}
+  #resume-bar .resume-txt span{color:var(--ink-soft);font-size:12px;}
+  #resume-bar .resume-btns{display:flex;gap:8px;}
+  #resume-bar button{padding:9px 14px;font-size:14px;}
   .ic-rot90{transform:rotate(90deg);} .ic-rot180{transform:rotate(180deg);} .ic-rot270{transform:rotate(270deg);}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
@@ -427,6 +433,11 @@
   <div class="emblem"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-desert"/></svg></div>
   <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-desert"/></svg> 出埃及大冒險</h1>
   <p class="subtitle">跟著摩西，從荊棘火焰一路走到紅海對岸，向耶和華歌唱。</p>
+
+  <div id="resume-bar" class="hidden">
+    <div class="resume-txt"><strong>有一局還沒結束</strong><span id="resume-info"></span></div>
+    <div class="resume-btns"><button id="resume-yes" class="good">繼續上一局</button><button id="resume-no" class="ghost">放棄</button></div>
+  </div>
 
   <div class="setup-group">
     <h3>遊玩模式</h3>
@@ -626,6 +637,32 @@ const state=window.state={
   taskResolve:null, infoPrev:null,
 };
 const MAX_HUMANS=4, MAX_BOTS=4;
+
+// ---- Save / resume an in-progress game (localStorage) ----
+const SAVE_KEY="exodusSave";
+function persist(){
+  if(navigator.webdriver && !window.FORCE_PERSIST)return;
+  if(!gameRunning()||!state.players.length)return;
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({
+    v:1, mode:state.mode, submode:state.submode, humans:state.humans, bots:state.bots, turnIdx:state.turnIdx,
+    log:state.log.slice(0,40),
+    players:state.players.map(p=>({id:p.id,name:p.name,pos:p.pos,skipTurns:p.skipTurns,shoesOff:!!p.shoesOff,
+      isBot:!!p.isBot,maintaining:p.maintaining||null,av:{emoji:p.av.emoji,hex:p.av.hex,name:p.av.name,id:p.av.id}}))
+  })); }catch(e){}
+}
+function clearSave(){ try{localStorage.removeItem(SAVE_KEY);}catch(e){} }
+function loadSave(){ try{const s=localStorage.getItem(SAVE_KEY); if(!s)return null; const o=JSON.parse(s); return (o&&o.players&&o.players.length)?o:null; }catch(e){return null;} }
+function resumeGame(o){
+  state.mode=o.mode; state.submode=o.submode; state.humans=o.humans||1; state.bots=o.bots||0;
+  state.players=o.players.map(p=>({id:p.id,name:p.name,pos:p.pos,skipTurns:p.skipTurns||0,shoesOff:!!p.shoesOff,
+    isBot:!!p.isBot,maintaining:p.maintaining||null,avIdx:p.isBot?-1:-1,av:p.av}));
+  state.turnIdx=Math.min(o.turnIdx||0,state.players.length-1); state.busy=false; state.log=o.log||[];
+  document.getElementById("setup").style.display="none";
+  document.getElementById("game").classList.add("active");
+  document.getElementById("win-screen").classList.add("hidden");
+  document.getElementById("mode-tag").textContent=`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`;
+  renderDie(1); renderBoard(); renderPlayers(); renderLog(); updateTurnUI(); BGM.start(); maybeBotTurn();
+}
 
 // ============================================================
 // Setup
@@ -850,8 +887,9 @@ function currentPlayer(){return state.players[state.turnIdx];}
 function updateTurnUI(){
   renderPlayers(); renderTokens();
   const p=currentPlayer();
-  document.getElementById("turn-name").textContent=p?`輪到 ${p.av.emoji} ${p.name}`:"—";
+  document.getElementById("turn-name").innerHTML=p?`輪到 ${avIcon(p)} ${escapeHtml(p.name)}`:"—";
   document.getElementById("roll-btn").disabled=state.busy||!!(p&&p.isBot);
+  persist();
 }
 function advanceTurn(){state.turnIdx=(state.turnIdx+1)%state.players.length;updateTurnUI();maybeBotTurn();}
 function gameRunning(){return document.getElementById("game").classList.contains("active")&&document.getElementById("win-screen").classList.contains("hidden");}
@@ -1457,6 +1495,7 @@ function launchConfetti(){
   frame();
 }
 function win(winner){
+  clearSave();
   playCheer();
   launchConfetti();
   pushLog(winner.isBot?`🤖 ${winner.av.emoji}${winner.name} 搶先抵達終點，玩家們再接再厲！`:`🌟 ${winner.av.emoji}${winner.name} 抵達終點，向耶和華歌唱！`,"hi");
@@ -1470,7 +1509,7 @@ function win(winner){
 // New game
 // ============================================================
 function backToSetup(){
-  stopConfetti(); BGM.stop();
+  stopConfetti(); BGM.stop(); clearSave();
   document.getElementById("game").classList.remove("active");
   document.getElementById("setup").style.display="block";
   document.getElementById("win-screen").classList.add("hidden");
@@ -1481,6 +1520,7 @@ function backToSetup(){
   document.getElementById("task-controls").innerHTML="";
   state.busy=false; state.taskPlan=null;
   renderSetup();
+  if(typeof showResumeBar==="function") showResumeBar();
 }
 document.getElementById("help-btn").addEventListener("click",()=>{
   openInfo("📖","玩法說明",MODE_LABEL[state.mode]+" · "+SUB_LABEL[state.submode],
@@ -1503,6 +1543,21 @@ function refreshMute(){ if(_muteBtn) _muteBtn.innerHTML=ic(SFX.muted?"mute":"sou
 if(_muteBtn) _muteBtn.addEventListener("click",()=>{ SFX.init(); const m=SFX.toggleMute(); refreshMute(); if(!m){SFX.resume();SFX.tick();BGM.start();} BGM.setVol(); });
 refreshMute();
 renderSetup();
+
+// Resume bar: if an unfinished game is saved, offer to continue it.
+function showResumeBar(){
+  const bar=document.getElementById("resume-bar"); if(!bar)return;
+  const o=loadSave();
+  if(!o){ bar.classList.add("hidden"); return; }
+  const humans=o.players.filter(p=>!p.isBot).length, bots=o.players.filter(p=>p.isBot).length;
+  const lead=o.players.reduce((a,b)=>b.pos>a.pos?b:a,o.players[0]);
+  document.getElementById("resume-info").textContent=
+    `${MODE_LABEL[o.mode]} · ${SUB_LABEL[o.submode]}｜玩家 ${humans}${bots?` ＋ 電腦 ${bots}`:""}｜進度到第 ${BOARD[lead.pos]?BOARD[lead.pos].n:lead.pos} 站`;
+  bar.classList.remove("hidden");
+}
+document.getElementById("resume-yes").addEventListener("click",()=>{ const o=loadSave(); if(o){ SFX.init(); SFX.resume(); resumeGame(o); } });
+document.getElementById("resume-no").addEventListener("click",()=>{ clearSave(); showResumeBar(); });
+showResumeBar();
 
 // PWA: register the service worker (installable + offline). Harmless on file://.
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
