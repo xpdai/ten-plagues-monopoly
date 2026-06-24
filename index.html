@@ -740,8 +740,8 @@ function computeLayout(){
   const n=BOARD.length;
   LAYOUT_MOBILE=isMobileLayout();
   if(LAYOUT_MOBILE){
-    const W=360, vGap=108, topM=86, botM=96;
-    const H=botM+(n-1)*vGap+topM, cx=W/2, amp=W/2-60, pts=[];
+    const W=296, vGap=120, topM=92, botM=104;
+    const H=botM+(n-1)*vGap+topM, cx=W/2, amp=W/2-54, pts=[];
     for(let i=0;i<n;i++){
       const y=H-botM-i*vGap;                 // index 0 at bottom, goal scrolls up
       const x=cx+amp*Math.sin(i*0.82);       // gentle left/right snake
