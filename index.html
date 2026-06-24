@@ -177,6 +177,7 @@
 
   /* ---------- Sidebar ---------- */
   #sidebar{display:flex;flex-direction:column;gap:14px;}
+  #mtabs{display:none;}
   .panel{background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
     padding:15px;border:3px solid var(--ink);border-radius:22px 18px 22px 18px;box-shadow:var(--pop);}
   .panel h3{font-size:17px;margin-bottom:11px;color:var(--coral-deep);display:flex;align-items:center;gap:6px;}
@@ -333,10 +334,27 @@
     .mini-arrange .mini-slot{width:72px;height:72px;}
   }
   @media (max-width:560px){
-    /* Candy-Crush vertical map: tall board scrolls inside a fixed viewport */
-    #board-wrap{max-height:74vh;overflow-y:auto;overflow-x:hidden;}
+    /* Candy-Crush vertical map + bottom tab bar fills the whole screen */
+    #game.active{display:flex;flex-direction:column;height:100vh;height:100dvh;gap:8px;padding:8px;box-sizing:border-box;}
+    .header-bar{flex:none;}
+    #board-wrap{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;}
     #board .stars{opacity:.95;}
     .tile .idx{width:23px;height:23px;font-size:12px;}
+    /* sidebar becomes the active-tab sheet just above the tab bar */
+    #sidebar{flex:none;gap:0;max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    #sidebar .panel{display:none;margin:0;}
+    #game.tab-dice .panel-dice{display:block;}
+    #game.tab-players .panel-players{display:block;}
+    #game.tab-log .panel-log{display:block;}
+    .panel-dice .dice{margin:6px 0;}
+    #log{max-height:30vh;}
+    /* bottom nav, Candy-Crush style */
+    #mtabs{display:flex;flex:none;gap:6px;background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
+      border:3px solid var(--ink);border-radius:20px;padding:6px;box-shadow:var(--pop);}
+    #mtabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border:none;border-radius:14px;
+      background:transparent;color:var(--ink-soft);font-weight:800;font-size:12px;box-shadow:none;}
+    #mtabs button .ic{width:22px;height:22px;}
+    #mtabs button.active{background:var(--leaf);color:#fff;text-shadow:0 1px 0 rgba(74,54,36,.3);}
   }
   @media (max-width:480px){
     #board-wrap{padding:8px;}
@@ -547,7 +565,7 @@
 </section>
 
 <!-- ============ GAME ============ -->
-<section id="game">
+<section id="game" class="tab-dice">
   <div class="header-bar">
     <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-desert"/></svg> 出埃及大冒險</h2>
     <span class="mode-tag" id="mode-tag">—</span>
@@ -557,10 +575,15 @@
   </div>
   <div id="board-wrap"><div id="board-fit"><div id="board" aria-label="遊戲地圖"></div></div></div>
   <div id="sidebar">
-    <div class="panel"><h3>玩家</h3><div id="players-list"></div></div>
-    <div class="panel dice-area"><h3 id="turn-name">—</h3><div class="dice" id="dice">🎲</div><button class="roll-btn" id="roll-btn">擲骰子</button></div>
-    <div class="panel"><h3>事件紀錄</h3><div id="log" aria-live="polite"></div></div>
+    <div class="panel panel-players"><h3>玩家</h3><div id="players-list"></div></div>
+    <div class="panel panel-dice dice-area"><h3 id="turn-name">—</h3><div class="dice" id="dice">🎲</div><button class="roll-btn" id="roll-btn">擲骰子</button></div>
+    <div class="panel panel-log"><h3>事件紀錄</h3><div id="log" aria-live="polite"></div></div>
   </div>
+  <nav id="mtabs" aria-label="面板切換">
+    <button data-tab="dice" class="active" aria-pressed="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dice"/></svg><span>擲骰</span></button>
+    <button data-tab="players" aria-pressed="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-people"/></svg><span>玩家</span></button>
+    <button data-tab="log" aria-pressed="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"/></svg><span>紀錄</span></button>
+  </nav>
 </section>
 
 <!-- ============ TASK MODAL ============ -->
@@ -1003,6 +1026,13 @@ window.addEventListener("resize",()=>{
   if(LAYOUT_MOBILE!==was && document.getElementById("game").classList.contains("active")) renderBoard();
   else fitBoard();
 });
+// mobile bottom-tab bar (擲骰 / 玩家 / 紀錄)
+function setMTab(name){
+  const g=document.getElementById("game");
+  g.classList.remove("tab-dice","tab-players","tab-log"); g.classList.add("tab-"+name);
+  document.querySelectorAll("#mtabs button").forEach(b=>{ const on=b.dataset.tab===name; b.classList.toggle("active",on); b.setAttribute("aria-pressed",on?"true":"false"); });
+}
+document.getElementById("mtabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b)setMTab(b.dataset.tab); });
 function renderTokens(){
   document.querySelectorAll(".tokens").forEach(el=>el.innerHTML="");
   state.players.forEach(p=>{
@@ -1052,6 +1082,8 @@ function advanceTurn(){state.turnIdx=(state.turnIdx+1)%state.players.length;upda
 function gameRunning(){return document.getElementById("game").classList.contains("active")&&document.getElementById("win-screen").classList.contains("hidden");}
 function maybeBotTurn(){
   const p=currentPlayer();
+  // on a human's turn, surface the 擲骰 tab so the roll button is visible (phone)
+  if(p&&!p.isBot&&typeof setMTab==="function")setMTab("dice");
   if(!p||!p.isBot||state.busy||!gameRunning())return;
   if(navigator.webdriver) botTurn(); else setTimeout(botTurn,650);
 }
