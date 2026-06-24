@@ -21,6 +21,13 @@
 <meta name="theme-color" content="#f4d9a6" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="出埃及大冒險" />
+<meta name="description" content="出埃及大冒險 — 跟著摩西，從火燒荊棘一路走到紅海對岸的桌遊。遊戲軟體／大地遊戲雙模式，可離線、可安裝。" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="出埃及大冒險" />
+<meta property="og:description" content="跟著摩西，從火燒荊棘走到紅海對岸的桌遊。" />
+<meta property="og:image" content="icon.svg" />
+<meta property="og:url" content="https://xpdai.github.io/ten-plagues-monopoly/" />
+<meta name="twitter:card" content="summary" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="icon.svg" />
@@ -129,6 +136,16 @@
   #board-fit{position:relative;margin:0 auto;}
   #board{position:relative;width:860px;height:540px;transform-origin:top left;}
   #board .road{position:absolute;inset:0;z-index:0;pointer-events:none;}
+  #board .decor{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;}
+  .tile.done{opacity:.62;filter:saturate(.65);}
+  .tile.done.current{opacity:1;filter:none;}
+  .flip-card{width:118px;height:158px;margin:6px auto 2px;perspective:640px;}
+  .flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .62s cubic-bezier(.3,.9,.3,1.15);}
+  .flip-card.flipped .flip-inner{transform:rotateY(180deg);}
+  .flip-face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:14px;display:flex;align-items:center;justify-content:center;border:3px solid var(--ink);box-shadow:var(--pop-sm);}
+  .flip-face.flip-back{background:linear-gradient(135deg,#9573c0,#5b4b95);box-shadow:inset 0 0 0 4px rgba(255,255,255,.25),var(--pop-sm);}
+  .flip-face.flip-back .card-q{font-size:60px;font-weight:800;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.25);}
+  .flip-face.flip-front{background:linear-gradient(135deg,#fff6d6,#ffe39c);transform:rotateY(180deg);font-weight:800;font-size:19px;color:var(--ink);text-align:center;padding:8px;}
   /* Candy-Crush-style winding "beaded" trail */
   .road-edge{fill:none;stroke:#e6c98e;stroke-width:24;stroke-linecap:round;stroke-linejoin:round;opacity:.38;}
   .road-base{fill:none;stroke:#fff5e0;stroke-width:12;stroke-linecap:round;stroke-linejoin:round;opacity:.6;}
@@ -354,6 +371,7 @@
   #manual-body .m-n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--nile-deep,#13415c);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px;}
   #manual-body .m-name{font-weight:800;font-size:15px;}
   #manual-body .m-task{font-size:13px;color:#3a3a4a;line-height:1.55;margin-top:2px;}
+  #manual-body .m-ref{font-size:12px;color:#3d8a48;font-weight:700;margin-top:3px;}
   @media print{
     body>*{display:none !important;}
     #manual-overlay{display:block !important;position:static;background:#fff;padding:0;overflow:visible;}
@@ -659,6 +677,16 @@ const TILES=[
 const GOAL_IDX=TILES.length-1; // 25
 const BOARD=TILES;
 
+// 每一站對應的出埃及記經文出處（和合本章節）。
+const SCRIPTURE={
+  0:"出埃及記 1:8-14", 1:"出埃及記 3:2-5", 2:"出埃及記 2:11-12", 3:"出埃及記 5:1", 4:"出埃及記 5:2",
+  5:"出埃及記 6:6-7", 6:"出埃及記 7:1-2", 7:"出埃及記 7:10-12", 8:"出埃及記 7:20-21", 9:"出埃及記 8:15",
+  10:"出埃及記 8:5-6", 11:"出埃及記 8:16-17", 12:"出埃及記 8:24", 13:"出埃及記 9:6", 14:"出埃及記 9:10-11",
+  15:"出埃及記 9:23-24", 16:"出埃及記 10:13-15", 17:"出埃及記 12:7,13", 18:"出埃及記 12:29-30", 19:"出埃及記 12:31-32",
+  20:"出埃及記 13:21-22", 21:"出埃及記 14:9", 22:"出埃及記 14:21-22", 23:"出埃及記 14:26-28", 24:"出埃及記 14:28",
+  25:"出埃及記 14:30-31", 26:"出埃及記 15:1-2",
+};
+
 // Winding path coordinates for 26 tiles (serpentine, bottom → top).
 const POS=(function(){
   const n=BOARD.length, cols=7, mX=70, mY=80, W=860, H=540;
@@ -873,9 +901,18 @@ function roadPath(pts){
   }
   return d;
 }
+// Decorative roadside scenery placed in the gaps between the winding rows.
+const DECOR_SVG=`<svg class="decor" viewBox="0 0 860 540" aria-hidden="true">
+  <g transform="translate(372 360)"><path d="M34 4 L66 56 H2 Z" fill="#dcb066" stroke="#b88f44" stroke-width="2" stroke-linejoin="round"/><path d="M34 4 V56" stroke="#c89951" stroke-width="2" opacity=".5"/></g>
+  <g transform="translate(150 372)" stroke-linecap="round"><path d="M26 56 q-3 -22 2 -34" stroke="#9a6b3a" stroke-width="5" fill="none"/><g stroke="#4ea34e" stroke-width="4" fill="none"><path d="M28 22 q-14 -5 -22 3"/><path d="M28 22 q-8 -14 -20 -14"/><path d="M28 22 q14 -5 22 3"/><path d="M28 22 q8 -14 20 -14"/><path d="M28 22 q0 -13 0 -20"/></g></g>
+  <g transform="translate(648 232)" stroke-linecap="round"><path d="M26 56 q-3 -22 2 -34" stroke="#9a6b3a" stroke-width="5" fill="none"/><g stroke="#4ea34e" stroke-width="4" fill="none"><path d="M28 22 q-14 -5 -22 3"/><path d="M28 22 q-8 -14 -20 -14"/><path d="M28 22 q14 -5 22 3"/><path d="M28 22 q8 -14 20 -14"/><path d="M28 22 q0 -13 0 -20"/></g></g>
+  <use href="#i-camel" x="396" y="104" width="58" height="58"/>
+  <use href="#i-cactus" x="196" y="232" width="44" height="44"/>
+</svg>`;
 function renderBoard(){
   const board=document.getElementById("board"); board.innerHTML="";
   board.insertAdjacentHTML("beforeend",`<svg class="road" viewBox="0 0 860 540" preserveAspectRatio="none" aria-hidden="true"><path class="road-edge" d="${roadPath(POS)}"/><path class="road-base" d="${roadPath(POS)}"/><path class="road-dash" d="${roadPath(POS)}"/></svg>`);
+  board.insertAdjacentHTML("beforeend",DECOR_SVG);
   BOARD.forEach((tile,i)=>{
     const el=document.createElement("div");
     el.className="tile "+(tile.cls||"");
@@ -903,7 +940,9 @@ function renderTokens(){
     const slot=document.querySelector(`.tokens[data-idx="${p.pos}"]`); if(!slot)return;
     const tok=document.createElement("div"); tok.className="token"; tok.style.background="#fff"; tok.style.borderColor=p.av.hex; tok.innerHTML=avIcon(p); tok.title=p.name; slot.appendChild(tok);
   });
-  document.querySelectorAll(".tile").forEach(el=>el.classList.remove("current"));
+  // dim stations everyone has already passed (progress cue, Candy-Crush style)
+  const minPos=state.players.length?Math.min(...state.players.map(p=>p.pos)):0;
+  document.querySelectorAll(".tile").forEach(el=>{ el.classList.remove("current"); el.classList.toggle("done", +el.dataset.idx<minPos); });
   const cur=currentPlayer(); if(cur){const t=document.querySelector(`.tile[data-idx="${cur.pos}"]`); if(t)t.classList.add("current");}
 }
 function renderPlayers(){
@@ -1228,8 +1267,17 @@ function taskModal(p,tile,plan,opts){
         return done();
       }
       if(kind==="chance"){
-        await button("🎴 抽卡");
+        await button("🎴 抽卡"); controls.innerHTML="";
         const card=1+Math.floor(Math.random()*7);
+        const flipCard=face=>new Promise(res=>{
+          stage.classList.remove("hidden");
+          stage.innerHTML=`<div class="flip-card"><div class="flip-inner"><div class="flip-face flip-back"><span class="card-q">？</span></div><div class="flip-face flip-front">${emo(face)}</div></div></div>`;
+          const reduced=(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)||navigator.webdriver;
+          const c=stage.querySelector(".flip-card");
+          if(reduced){ c.classList.add("flipped"); return res(); }
+          requestAnimationFrame(()=>requestAnimationFrame(()=>c.classList.add("flipped"))); setTimeout(res,700);
+        });
+        SFX.pop(); await flipCard(card===7?"暫停一輪":`前進 ${card} 步`);
         if(card===7){ setText("抽到「暫停一輪」。"); p.skipTurns+=1; renderPlayers(); pushLog(`🎴 ${p.name} 抽到暫停一輪。`); await button("接受","warn"); return done(); }
         setText(`抽到「前進 ${card} 步」，並執行抵達格子的任務。`); pushLog(`🎴 ${p.name} 抽到前進 ${card} 步。`);
         await button("前進並執行"); back.classList.add("hidden"); controls.innerHTML=""; applyMove(p,card);
@@ -1486,7 +1534,8 @@ function openInfo(icon,title,sub,text){
 }
 function openInfoTile(idx){
   const tile=BOARD[idx]; const plan=tile.plan(state.mode||"soft",state.submode||"vs");
-  openInfo(tile.icon,`${tile.n}. ${tile.name}`,(tile.sub?tile.sub+" · ":"")+`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`,plan.text);
+  const verse=SCRIPTURE[tile.n]?`\n\n📖 經文：${SCRIPTURE[tile.n]}`:"";
+  openInfo(tile.icon,`${tile.n}. ${tile.name}`,(tile.sub?tile.sub+" · ":"")+`${MODE_LABEL[state.mode]} · ${SUB_LABEL[state.submode]}`,plan.text+verse);
 }
 function openInfoPlayer(pid){
   const p=state.players.find(x=>x.id===pid); if(!p)return;
@@ -1635,7 +1684,8 @@ function buildManual(){
   BOARD.forEach(tile=>{
     const ph=tile.plan("land","host"), pv=tile.plan("land","vs");
     const task=(ph.text===pv.text)?ph.text:`〔關主模式〕${ph.text}\n〔玩家對戰〕${pv.text}`;
-    h+=`<div class="m-st"><div class="m-n">${tile.n}</div><div><div class="m-name">${escapeHtml(tile.name)}${tile.sub?` <span style="font-weight:600;color:#7a6347;font-size:12px">· ${escapeHtml(tile.sub)}</span>`:""}</div><div class="m-task">${escapeHtml(task).replace(/\n/g,"<br>")}</div></div></div>`;
+    const ref=SCRIPTURE[tile.n]?`<div class="m-ref">📖 ${escapeHtml(SCRIPTURE[tile.n])}</div>`:"";
+    h+=`<div class="m-st"><div class="m-n">${tile.n}</div><div><div class="m-name">${escapeHtml(tile.name)}${tile.sub?` <span style="font-weight:600;color:#7a6347;font-size:12px">· ${escapeHtml(tile.sub)}</span>`:""}</div><div class="m-task">${escapeHtml(task).replace(/\n/g,"<br>")}</div>${ref}</div></div>`;
   });
   body.innerHTML=h;
 }
