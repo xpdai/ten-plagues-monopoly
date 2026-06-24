@@ -340,14 +340,16 @@
     #board-wrap{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;}
     #board .stars{opacity:.95;}
     .tile .idx{width:23px;height:23px;font-size:12px;}
-    /* sidebar becomes the active-tab sheet just above the tab bar */
-    #sidebar{flex:none;gap:0;max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    /* sidebar = active-tab sheet just above the tab bar; FIXED height so the
+       map above doesn't jump when you switch tabs */
+    #sidebar{flex:none;gap:0;height:32vh;overflow:hidden;}
     #sidebar .panel{display:none;margin:0;}
-    #game.tab-dice .panel-dice{display:block;}
-    #game.tab-players .panel-players{display:block;}
-    #game.tab-log .panel-log{display:block;}
+    #game.tab-dice .panel-dice,
+    #game.tab-players .panel-players,
+    #game.tab-log .panel-log{display:flex;flex-direction:column;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    .panel-dice{justify-content:center;}
     .panel-dice .dice{margin:6px 0;}
-    #log{max-height:30vh;}
+    #log{max-height:none;}
     /* bottom nav, Candy-Crush style */
     #mtabs{display:flex;flex:none;gap:6px;background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
       border:3px solid var(--ink);border-radius:20px;padding:6px;box-shadow:var(--pop);}
