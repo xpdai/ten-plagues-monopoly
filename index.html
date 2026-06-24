@@ -91,6 +91,7 @@
   .setup-group h3::before{content:"✦";color:var(--sand-deep);}
   .choice-row{display:flex;gap:11px;flex-wrap:wrap;}
   .choice-row button{flex:1;min-width:130px;background:var(--cream);text-align:left;padding:13px 15px;border-radius:18px 14px 18px 14px;}
+  #diff-row button{min-width:0;text-align:center;}
   .choice-row button .c-title{font-size:16px;}
   .choice-row button .c-desc{font-size:12px;font-weight:600;color:var(--ink-soft);margin-top:3px;line-height:1.35;}
   .choice-row button.active{background:#dff3f1;border-color:var(--teal-deep);box-shadow:0 0 0 3px rgba(70,170,166,.3),var(--pop-sm);}
@@ -516,6 +517,16 @@
     <p class="count-hint" id="count-hint"></p>
   </div>
 
+  <div class="setup-group" id="diff-group">
+    <h3>迷你遊戲難度</h3>
+    <div class="choice-row" id="diff-row">
+      <button data-diff="0"><div class="c-title">簡單</div></button>
+      <button data-diff="1"><div class="c-title">普通</div></button>
+      <button data-diff="2"><div class="c-title">困難</div></button>
+    </div>
+    <p class="count-hint">只影響「遊戲軟體模式」的小遊戲份量（青蛙、蒼蠅、點擊次數等）。</p>
+  </div>
+
   <div class="setup-group">
     <div class="player-rows" id="player-rows"></div>
   </div>
@@ -708,11 +719,14 @@ const SUB_LABEL={host:"關主模式",vs:"玩家對戰模式"};
 // State
 // ============================================================
 const state=window.state={
-  mode:null, submode:null, humans:1, bots:0, picks:[],
+  mode:null, submode:null, humans:1, bots:0, diff:1, picks:[],
   players:[], turnIdx:0, busy:false, log:[],
   taskResolve:null, infoPrev:null,
 };
 const MAX_HUMANS=4, MAX_BOTS=4;
+// Mini-game difficulty: scale a base count/length (簡單 / 普通 / 困難).
+const DIFF_MUL=[0.7,1,1.45];
+function dN(base){ return Math.max(1,Math.round(base*(DIFF_MUL[state.diff]||1))); }
 
 // ---- Save / resume an in-progress game (localStorage) ----
 const SAVE_KEY="exodusSave";
@@ -720,7 +734,7 @@ function persist(){
   if(navigator.webdriver && !window.FORCE_PERSIST)return;
   if(!gameRunning()||!state.players.length)return;
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify({
-    v:1, mode:state.mode, submode:state.submode, humans:state.humans, bots:state.bots, turnIdx:state.turnIdx,
+    v:1, mode:state.mode, submode:state.submode, humans:state.humans, bots:state.bots, diff:state.diff, turnIdx:state.turnIdx,
     log:state.log.slice(0,40),
     players:state.players.map(p=>({id:p.id,name:p.name,pos:p.pos,skipTurns:p.skipTurns,shoesOff:!!p.shoesOff,
       isBot:!!p.isBot,maintaining:p.maintaining||null,av:{emoji:p.av.emoji,hex:p.av.hex,name:p.av.name,id:p.av.id}}))
@@ -729,7 +743,7 @@ function persist(){
 function clearSave(){ try{localStorage.removeItem(SAVE_KEY);}catch(e){} }
 function loadSave(){ try{const s=localStorage.getItem(SAVE_KEY); if(!s)return null; const o=JSON.parse(s); return (o&&o.players&&o.players.length)?o:null; }catch(e){return null;} }
 function resumeGame(o){
-  state.mode=o.mode; state.submode=o.submode; state.humans=o.humans||1; state.bots=o.bots||0;
+  state.mode=o.mode; state.submode=o.submode; state.humans=o.humans||1; state.bots=o.bots||0; state.diff=(o.diff==null?1:o.diff);
   state.players=o.players.map(p=>({id:p.id,name:p.name,pos:p.pos,skipTurns:p.skipTurns||0,shoesOff:!!p.shoesOff,
     isBot:!!p.isBot,maintaining:p.maintaining||null,avIdx:p.isBot?-1:-1,av:p.av}));
   state.turnIdx=Math.min(o.turnIdx||0,state.players.length-1); state.busy=false; state.log=o.log||[];
@@ -751,6 +765,8 @@ function renderSetup(){
   normalizeSetup();
   document.querySelectorAll("#mode-row button").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));
   document.querySelectorAll("#submode-row button").forEach(b=>b.classList.toggle("active",b.dataset.sub===state.submode));
+  document.querySelectorAll("#diff-row button").forEach(b=>b.classList.toggle("active",+b.dataset.diff===state.diff));
+  const dg=document.getElementById("diff-group"); if(dg) dg.style.display=(state.mode==="land")?"none":"";
   // steppers
   const hv=document.getElementById("humans-val"), bv=document.getElementById("bots-val");
   if(hv) hv.textContent=state.humans; if(bv) bv.textContent=state.bots;
@@ -796,6 +812,7 @@ function refreshSwatches(){
 }
 document.getElementById("mode-row").addEventListener("click",e=>{const b=e.target.closest("button[data-mode]");if(b){state.mode=b.dataset.mode;renderSetup();}});
 document.getElementById("submode-row").addEventListener("click",e=>{const b=e.target.closest("button[data-sub]");if(b&&!b.disabled){state.submode=b.dataset.sub;renderSetup();}});
+document.getElementById("diff-row").addEventListener("click",e=>{const b=e.target.closest("button[data-diff]");if(b){state.diff=+b.dataset.diff;renderSetup();}});
 document.querySelector(".stepper-row").addEventListener("click",e=>{const b=e.target.closest(".s-btn");if(!b||b.disabled)return;const who=b.dataset.who,d=+b.dataset.d;if(who==="humans")state.humans+=d;else state.bots+=d;renderSetup();});
 document.getElementById("player-rows").addEventListener("click",e=>{const sw=e.target.closest(".swatch");if(!sw||sw.classList.contains("taken"))return;const row=+sw.dataset.row;state.picks[row]={...state.picks[row],av:+sw.dataset.av};refreshSwatches();});
 document.getElementById("player-rows").addEventListener("keydown",e=>{const sw=e.target.closest&&e.target.closest(".swatch");if(sw&&(e.key==="Enter"||e.key===" ")){e.preventDefault();sw.click();}});
@@ -1382,16 +1399,16 @@ function spawnTargets(stage,done,iconName,K,move,color){
 }
 const MINIGAMES={
   tap30:{mount(stage,done){
-    let n=0,start=Date.now();
-    stage.innerHTML=`<div class="mini-tap">快速點我！<span class="cnt" style="font-size:16px">0 / 30</span><span class="tap-finger">${ic("finger")}</span></div>`;
+    let n=0,start=Date.now(); const need=dN(30);
+    stage.innerHTML=`<div class="mini-tap">快速點我！<span class="cnt" style="font-size:16px">0 / ${need}</span><span class="tap-finger">${ic("finger")}</span></div>`;
     const el=stage.querySelector(".mini-tap"),cnt=el.querySelector(".cnt");
-    el.addEventListener("click",()=>{ n++; cnt.textContent=n+" / 30"; if(n>=30)done(Math.max(50,12000-(Date.now()-start))); });
+    el.addEventListener("click",()=>{ n++; cnt.textContent=n+" / "+need; if(n>=need)done(Math.max(50,12000-(Date.now()-start))); });
   }},
-  frogs:{mount(stage,done){ return spawnTargets(stage,done,"frog",7,false,"#3f9a4a"); }},
-  flies:{mount(stage,done){ return spawnTargets(stage,done,"fly",6,true,"#444"); }},
+  frogs:{mount(stage,done){ return spawnTargets(stage,done,"frog",dN(7),false,"#3f9a4a"); }},
+  flies:{mount(stage,done){ return spawnTargets(stage,done,"fly",dN(6),true,"#444"); }},
   dance:{mount(stage,done){
     const dirs={ArrowUp:"⬆️",ArrowLeft:"⬅️",ArrowDown:"⬇️",ArrowRight:"➡️"};
-    const keys=Object.keys(dirs), seq=Array.from({length:8},()=>keys[Math.floor(Math.random()*4)]);
+    const keys=Object.keys(dirs), seq=Array.from({length:dN(8)},()=>keys[Math.floor(Math.random()*4)]);
     let i=0,correct=0,start=Date.now();
     stage.innerHTML=`<div class="mini-dance"><div class="arrow"></div><div class="mini-progress">0 / ${seq.length}</div><div class="pad"></div></div>`;
     const arrowEl=stage.querySelector(".arrow"),prog=stage.querySelector(".mini-progress"),pad=stage.querySelector(".pad");
@@ -1417,7 +1434,7 @@ const MINIGAMES={
     let gx=0; const setGuy=x=>{ gx=Math.max(15,Math.min(field.clientWidth-15,x)); guy.style.left=gx+"px"; };
     setGuy(field.clientWidth/2);
     field.addEventListener("pointermove",e=>{ const r=field.getBoundingClientRect(); setGuy(e.clientX-r.left); });
-    let hits=0,spawned=0; const N=14, active=[];
+    let hits=0,spawned=0; const N=dN(14), active=[];
     const sp=setInterval(()=>{ if(spawned>=N){clearInterval(sp);return;} spawned++;
       const isIce=Math.random()<.5; const o=document.createElement("div"); o.className="mini-drop"; o.innerHTML=ic(isIce?"ice":"fire"); o.style.color=isIce?"#5bb6dd":"#e8722e";
       const x=Math.random()*(field.clientWidth-22); o.style.left=x+"px"; o.style.top="-24px"; field.appendChild(o);
@@ -1431,7 +1448,7 @@ const MINIGAMES={
     return ()=>{ clearInterval(sp); clearInterval(tick); };
   }},
   rash:{mount(stage,done){
-    const K=8; let left=K,start=Date.now();
+    const K=dN(8); let left=K,start=Date.now();
     stage.innerHTML='<div class="mini-field" style="height:210px"></div><div class="mini-progress">按住並來回「擦拭」消除疹子（剩 '+left+'）</div>';
     const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
     for(let i=0;i<K;i++){ const s=document.createElement("div"); s.className="mini-rash"; s.innerHTML=ic("boil"); s.style.color="#d12f2f";
@@ -1458,7 +1475,7 @@ const MINIGAMES={
       if(maxX>=W-8){ fin=true; done({score:Math.max(50,2000-errors*25)}); } });
   }},
   redsea:{mount(stage,done){
-    const H=200; let people=4,touches=0,cur=null,drag=false;
+    const H=200; let people=dN(4),touches=0,cur=null,drag=false;
     stage.innerHTML='<div class="mini-sea" style="position:relative;height:'+H+'px;border-radius:12px;overflow:hidden;background:linear-gradient(#6ec1e4 0 26%,#f3e3b8 26% 74%,#6ec1e4 74% 100%)"></div><div class="mini-progress">把人一個個從左拖到右側乾路盡頭，別碰到上下海水（碰到扣分）。剩 '+people+' 人</div>';
     const sea=stage.querySelector(".mini-sea"),prog=stage.querySelector(".mini-progress");
     function spawn(){ if(people<=0){ done({score:Math.max(50,2000-touches*150),penalty:touches}); return; }
@@ -1506,7 +1523,7 @@ const MINIGAMES={
     inp.addEventListener("change",()=>{ const f=inp.files&&inp.files[0]; if(!f)return; try{ prev.innerHTML='<img src="'+URL.createObjectURL(f)+'" alt="">'; }catch(e){} setTimeout(()=>done({score:1000}),400); });
   }},
   palm:{mount(stage,done){
-    let score=0,penalty=0,shown=0; const N=12;
+    let score=0,penalty=0,shown=0; const N=dN(12);
     stage.innerHTML='<div class="mini-field" style="height:200px"></div><div class="mini-progress">點「'+ic("palm")+'」、別點「'+ic("fist")+'」（誤點扣分）。命中 0 / 誤點 0</div>';
     const field=stage.querySelector(".mini-field"),prog=stage.querySelector(".mini-progress");
     const upd=()=>prog.innerHTML="點 "+ic("palm")+"、別點 "+ic("fist")+"。命中 "+score+" / 誤點 "+penalty;
