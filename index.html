@@ -214,9 +214,15 @@
   @keyframes shake{0%{transform:rotate(0) scale(1)}15%{transform:translate(-4px,2px) rotate(-12deg) scale(1.05)}35%{transform:translate(4px,-3px) rotate(12deg) scale(1.08)}55%{transform:translate(-3px,-3px) rotate(-8deg) scale(1.04)}75%{transform:translate(3px,2px) rotate(6deg) scale(1.06)}100%{transform:rotate(0) scale(1)}}
   .roll-btn{width:100%;font-size:20px;padding:15px;background:var(--leaf);color:#fff;border-radius:18px;text-shadow:0 1px 0 rgba(74,54,36,.3);}
   #turn-name{color:var(--teal-deep);}
-  #log{max-height:210px;overflow-y:auto;font-size:13.5px;}
-  #log .entry{padding:6px 8px;border-radius:9px;margin-bottom:3px;background:rgba(255,255,255,.5);}
-  #log .entry.hi{background:#dff3f1;font-weight:700;}
+  #log{overflow-y:auto;font-size:13.5px;padding-right:2px;
+    -webkit-mask-image:linear-gradient(180deg,#000 88%,transparent);mask-image:linear-gradient(180deg,#000 88%,transparent);}
+  #log .entry{padding:7px 9px 7px 11px;border-radius:9px;margin-bottom:4px;background:rgba(255,255,255,.55);
+    border-left:3px solid #ddd2ba;line-height:1.42;color:var(--ink);}
+  #log .entry:first-child{background:#e9f6f2;border-left-color:var(--teal,#46aaa6);font-weight:700;animation:logIn .34s ease;}
+  #log .entry.hi{background:#fff2cc;border-left-color:#e9b949;font-weight:800;}
+  #log .empty{color:var(--ink-soft);font-size:13px;padding:10px 6px;border:none;background:none;}
+  @keyframes logIn{from{opacity:.15;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  @media (min-width:561px){ #log{height:clamp(190px,30vh,330px);} }
 
   /* ---------- Modals ---------- */
   .backdrop{position:fixed;inset:0;background:rgba(50,36,24,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:100;padding:18px;animation:fadein .2s ease;}
@@ -1086,7 +1092,12 @@ document.getElementById("board").addEventListener("keydown",e=>{if(e.key!=="Ente
 // Log / turn
 // ============================================================
 function pushLog(msg,cls){state.log.unshift({msg,cls});if(state.log.length>40)state.log.pop();renderLog();}
-function renderLog(){document.getElementById("log").innerHTML=state.log.slice(0,12).map(e=>`<div class="entry ${e.cls||""}">${emo(e.msg)}</div>`).join("");}
+function renderLog(){
+  const el=document.getElementById("log");
+  el.innerHTML=state.log.length
+    ? state.log.slice(0,20).map(e=>`<div class="entry ${e.cls||""}">${emo(e.msg)}</div>`).join("")
+    : `<div class="empty">遊戲事件會顯示在這裡…</div>`;
+}
 function currentPlayer(){return state.players[state.turnIdx];}
 function updateTurnUI(){
   renderPlayers(); renderTokens();
