@@ -1,0 +1,15 @@
+{
+  "name": "出埃及大冒險",
+  "short_name": "出埃及",
+  "description": "跟著摩西，從火燒荊棘一路走到紅海對岸的桌遊。支援遊戲軟體模式與大地遊戲模式。",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4d9a6",
+  "theme_color": "#f4d9a6",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

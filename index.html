@@ -21,6 +21,9 @@
 <meta name="theme-color" content="#f4d9a6" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="出埃及大冒險" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
 <title>出埃及大冒險</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -718,10 +721,13 @@ const I8={
   timer:"color/stopwatch",gamepad:"color/controller",person:"color/standing-man",palm:"color/hand",
   scissors:"color/scissors",arrow:"color/up",finger:"color/tap-gesture",
 };
+// If an Icons8 image can't load (offline / CDN down), swap it for the inline
+// hand-drawn SVG of the same concept — so icons always show, even cold-offline.
+window.icFail=function(img){ try{ img.outerHTML=`<svg class="${img.className}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${img.dataset.ic}"/></svg>`; }catch(e){} };
 function ic(name,cls){
   const c="ic"+(cls?" "+cls:"");
   const slug=I8[name];
-  if(slug){const i=slug.indexOf("/");return `<img class="${c}" src="https://img.icons8.com/${slug.slice(0,i)}/96/${slug.slice(i+1)}.png" alt="" draggable="false">`;}
+  if(slug){const i=slug.indexOf("/");return `<img class="${c}" data-ic="${name}" src="https://img.icons8.com/${slug.slice(0,i)}/96/${slug.slice(i+1)}.png" alt="" draggable="false" onerror="icFail(this)">`;}
   return `<svg class="${c}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 }
 // emoji → icon name (+ optional space-separated extra classes)
@@ -1497,6 +1503,11 @@ function refreshMute(){ if(_muteBtn) _muteBtn.innerHTML=ic(SFX.muted?"mute":"sou
 if(_muteBtn) _muteBtn.addEventListener("click",()=>{ SFX.init(); const m=SFX.toggleMute(); refreshMute(); if(!m){SFX.resume();SFX.tick();BGM.start();} BGM.setVol(); });
 refreshMute();
 renderSetup();
+
+// PWA: register the service worker (installable + offline). Harmless on file://.
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
 </script>
 </body>
 </html>
