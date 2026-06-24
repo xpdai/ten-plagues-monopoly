@@ -214,15 +214,31 @@
   @keyframes shake{0%{transform:rotate(0) scale(1)}15%{transform:translate(-4px,2px) rotate(-12deg) scale(1.05)}35%{transform:translate(4px,-3px) rotate(12deg) scale(1.08)}55%{transform:translate(-3px,-3px) rotate(-8deg) scale(1.04)}75%{transform:translate(3px,2px) rotate(6deg) scale(1.06)}100%{transform:rotate(0) scale(1)}}
   .roll-btn{width:100%;font-size:20px;padding:15px;background:var(--leaf);color:#fff;border-radius:18px;text-shadow:0 1px 0 rgba(74,54,36,.3);}
   #turn-name{color:var(--teal-deep);}
-  #log{overflow-y:auto;font-size:13.5px;padding-right:2px;
-    -webkit-mask-image:linear-gradient(180deg,#000 88%,transparent);mask-image:linear-gradient(180deg,#000 88%,transparent);}
+  /* ---------- Announcement bar (latest event, ticker style) ---------- */
+  #announce-wrap{grid-column:1/-1;position:relative;}
+  #announce{width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+    background:linear-gradient(180deg,#fffaf0,#fff2d6);border:3px solid var(--ink);border-radius:18px;
+    padding:10px 14px;box-shadow:var(--pop-sm);cursor:pointer;overflow:hidden;}
+  #announce .an-mega{width:22px;height:22px;flex:none;color:var(--plum);}
+  #announce .an-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    font-weight:700;font-size:14.5px;color:var(--ink);display:flex;align-items:center;gap:5px;}
+  #announce .an-caret{flex:none;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
+    border-top:6px solid var(--ink-soft);transition:transform .2s;}
+  #announce[aria-expanded="true"] .an-caret{transform:rotate(180deg);}
+  #announce.hi{background:linear-gradient(180deg,#fff6d6,#ffe7a6);border-color:#caa12f;}
+  #announce.pulse .an-text{animation:antext .42s ease;}
+  @keyframes antext{0%{opacity:0;transform:translateX(-9px)}100%{opacity:1;transform:none}}
+  #announce-log{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;
+    background:#fff;border:2.5px solid var(--line,#ece1c8);border-radius:14px;box-shadow:var(--pop);
+    padding:11px 12px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  #announce-log.hidden{display:none;}
+  #announce-log .an-log-title{font-weight:800;font-size:12px;color:var(--ink-soft);margin-bottom:7px;}
+  #log{font-size:13.5px;}
   #log .entry{padding:7px 9px 7px 11px;border-radius:9px;margin-bottom:4px;background:rgba(255,255,255,.55);
     border-left:3px solid #ddd2ba;line-height:1.42;color:var(--ink);}
-  #log .entry:first-child{background:#e9f6f2;border-left-color:var(--teal,#46aaa6);font-weight:700;animation:logIn .34s ease;}
+  #log .entry:first-child{background:#e9f6f2;border-left-color:var(--teal,#46aaa6);font-weight:700;}
   #log .entry.hi{background:#fff2cc;border-left-color:#e9b949;font-weight:800;}
-  #log .empty{color:var(--ink-soft);font-size:13px;padding:10px 6px;border:none;background:none;}
-  @keyframes logIn{from{opacity:.15;transform:translateY(-6px)}to{opacity:1;transform:none}}
-  @media (min-width:561px){ #log{height:clamp(190px,30vh,330px);} }
+  #log .empty{color:var(--ink-soft);font-size:13px;padding:8px 6px;border:none;background:none;}
 
   /* ---------- Modals ---------- */
   .backdrop{position:fixed;inset:0;background:rgba(50,36,24,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:100;padding:18px;animation:fadein .2s ease;}
@@ -353,7 +369,8 @@
   @media (max-width:560px){
     /* Candy-Crush vertical map + bottom tab bar fills the whole screen */
     #game.active{display:flex;flex-direction:column;height:100vh;height:100dvh;gap:8px;padding:8px;box-sizing:border-box;}
-    .header-bar{flex:none;}
+    .header-bar,#announce-wrap{flex:none;}
+    #announce-log{max-height:60vh;}
     #board-wrap{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;}
     #board .stars{opacity:.95;}
     .tile .idx{width:23px;height:23px;font-size:12px;}
@@ -362,12 +379,10 @@
     #sidebar{flex:none;gap:0;height:32vh;overflow:hidden;}
     #sidebar .panel{display:none;margin:0;}
     #game.tab-dice .panel-dice,
-    #game.tab-players .panel-players,
-    #game.tab-log .panel-log{display:flex;flex-direction:column;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    #game.tab-players .panel-players{display:flex;flex-direction:column;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
     .panel-dice{justify-content:center;align-items:center;}
     .panel-dice h3,.panel-dice .roll-btn{width:100%;}
     .panel-dice .dice{margin:6px 0;}
-    #log{max-height:none;}
     /* bottom nav, Candy-Crush style */
     #mtabs{display:flex;flex:none;gap:6px;background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
       border:3px solid var(--ink);border-radius:20px;padding:6px;box-shadow:var(--pop);}
@@ -593,16 +608,22 @@
     <button class="new-game" id="help-btn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-help"/></svg> 玩法</button>
     <button class="new-game" id="new-game-btn">重新開始</button>
   </div>
+  <div id="announce-wrap">
+    <button id="announce" type="button" aria-expanded="false" aria-label="最新事件，點擊查看完整紀錄">
+      <svg class="ic an-mega" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-megaphone"/></svg>
+      <span class="an-text" aria-live="polite">遊戲事件會顯示在這裡…</span>
+      <span class="an-caret" aria-hidden="true"></span>
+    </button>
+    <div id="announce-log" class="hidden"><div class="an-log-title">事件紀錄</div><div id="log"></div></div>
+  </div>
   <div id="board-wrap"><div id="board-fit"><div id="board" aria-label="遊戲地圖"></div></div></div>
   <div id="sidebar">
     <div class="panel panel-players"><h3>玩家</h3><div id="players-list"></div></div>
     <div class="panel panel-dice dice-area"><h3 id="turn-name">—</h3><div class="dice" id="dice">🎲</div><button class="roll-btn" id="roll-btn">擲骰子</button></div>
-    <div class="panel panel-log"><h3>事件紀錄</h3><div id="log" aria-live="polite"></div></div>
   </div>
   <nav id="mtabs" aria-label="面板切換">
     <button data-tab="dice" class="active" aria-pressed="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dice"/></svg><span>擲骰</span></button>
     <button data-tab="players" aria-pressed="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-people"/></svg><span>玩家</span></button>
-    <button data-tab="log" aria-pressed="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"/></svg><span>紀錄</span></button>
   </nav>
 </section>
 
@@ -1093,11 +1114,27 @@ document.getElementById("board").addEventListener("keydown",e=>{if(e.key!=="Ente
 // ============================================================
 function pushLog(msg,cls){state.log.unshift({msg,cls});if(state.log.length>40)state.log.pop();renderLog();}
 function renderLog(){
+  const latest=state.log[0];
+  const an=document.getElementById("announce"),at=document.getElementById("an-text-wrap")||document.querySelector("#announce .an-text");
+  if(an&&at){
+    at.innerHTML=latest?emo(latest.msg):"遊戲事件會顯示在這裡…";
+    an.classList.toggle("hi",!!(latest&&latest.cls==="hi"));
+    an.classList.remove("pulse"); void an.offsetWidth; an.classList.add("pulse");
+  }
   const el=document.getElementById("log");
-  el.innerHTML=state.log.length
+  if(el) el.innerHTML=state.log.length
     ? state.log.slice(0,20).map(e=>`<div class="entry ${e.cls||""}">${emo(e.msg)}</div>`).join("")
-    : `<div class="empty">遊戲事件會顯示在這裡…</div>`;
+    : `<div class="empty">尚無事件。</div>`;
 }
+// announcement bar → expand / collapse the full history
+(function(){
+  const an=document.getElementById("announce"),dd=document.getElementById("announce-log");
+  if(!an||!dd)return;
+  function setOpen(o){ dd.classList.toggle("hidden",!o); an.setAttribute("aria-expanded",o?"true":"false"); }
+  an.addEventListener("click",e=>{ e.stopPropagation(); setOpen(dd.classList.contains("hidden")); });
+  document.addEventListener("click",e=>{ if(!dd.classList.contains("hidden")&&!dd.contains(e.target)&&!an.contains(e.target)) setOpen(false); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") setOpen(false); });
+})();
 function currentPlayer(){return state.players[state.turnIdx];}
 function updateTurnUI(){
   renderPlayers(); renderTokens();
