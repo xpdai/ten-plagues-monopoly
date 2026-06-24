@@ -237,6 +237,9 @@
   .mini-target:active{transform:scale(1.18);}
   .mini-dance{display:flex;flex-direction:column;align-items:center;gap:9px;}
   .mini-dance .arrow{font-size:60px;line-height:1;height:66px;animation:iconbob 1.6s ease-in-out infinite;}
+  .mini-dance .arrow.pop{animation:arrowpop .26s ease-out;}
+  @keyframes arrowpop{0%{transform:scale(.55);opacity:.35}55%{transform:scale(1.22)}100%{transform:scale(1);opacity:1}}
+  .mini-dance .pad button.lit{background:var(--leaf);color:#fff;transform:scale(1.08);}
   .mini-dance .pad{display:grid;grid-template-columns:repeat(4,54px);gap:9px;}
   .mini-dance .pad button{font-size:23px;padding:11px 0;background:var(--cream);}
   .mini-type-target{font-size:21px;font-weight:800;background:#efe6fb;border:2.5px solid var(--ink);padding:13px;border-radius:14px;margin-bottom:9px;letter-spacing:2px;}
@@ -1408,13 +1411,18 @@ const MINIGAMES={
   flies:{mount(stage,done){ return spawnTargets(stage,done,"fly",dN(6),true,"#444"); }},
   dance:{mount(stage,done){
     const dirs={ArrowUp:"⬆️",ArrowLeft:"⬅️",ArrowDown:"⬇️",ArrowRight:"➡️"};
-    const keys=Object.keys(dirs), seq=Array.from({length:dN(8)},()=>keys[Math.floor(Math.random()*4)]);
+    const keys=Object.keys(dirs);
+    // build a sequence with no two identical directions in a row, so each
+    // prompt is visibly different from the last one
+    const seq=[]; for(let n=0;n<dN(8);n++){ let k; do{ k=keys[Math.floor(Math.random()*4)]; }while(k===seq[n-1]); seq.push(k); }
     let i=0,correct=0,start=Date.now();
     stage.innerHTML=`<div class="mini-dance"><div class="arrow"></div><div class="mini-progress">0 / ${seq.length}</div><div class="pad"></div></div>`;
     const arrowEl=stage.querySelector(".arrow"),prog=stage.querySelector(".mini-progress"),pad=stage.querySelector(".pad");
-    keys.forEach(k=>{const b=document.createElement("button");b.innerHTML=emo(dirs[k]);b.onclick=()=>hit(k);pad.appendChild(b);});
-    function render(){ arrowEl.innerHTML=emo(dirs[seq[i]]); prog.textContent=i+" / "+seq.length; }
+    const btns={}; keys.forEach(k=>{const b=document.createElement("button");b.innerHTML=emo(dirs[k]);b.onclick=()=>hit(k);pad.appendChild(b);btns[k]=b;});
+    function render(){ arrowEl.innerHTML=emo(dirs[seq[i]]); prog.textContent=i+" / "+seq.length;
+      arrowEl.classList.remove("pop"); void arrowEl.offsetWidth; arrowEl.classList.add("pop"); }
     function hit(k){ if(i>=seq.length)return; if(k===seq[i])correct++; i++;
+      const b=btns[k]; if(b){ b.classList.add("lit"); setTimeout(()=>b.classList.remove("lit"),140); }
       if(i>=seq.length){ document.removeEventListener("keydown",onKey); done(Math.max(50,correct*1500-Math.floor((Date.now()-start)/20))); } else render(); }
     function onKey(e){ if(dirs[e.key]){ e.preventDefault(); hit(e.key); } }
     document.addEventListener("keydown",onKey); render();
