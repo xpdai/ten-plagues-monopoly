@@ -1484,14 +1484,14 @@ const MINIGAMES={
   }},
   redsea:{mount(stage,done){
     const H=200; let people=dN(4),touches=0,cur=null,drag=false;
-    stage.innerHTML='<div class="mini-sea" style="position:relative;height:'+H+'px;border-radius:12px;overflow:hidden;touch-action:none;background:linear-gradient(#6ec1e4 0 18%,#f3e3b8 18% 82%,#6ec1e4 82% 100%)"></div><div class="mini-progress">在乾路上按住（不用剛好點到人），把人一個個推到右側盡頭，別碰到上下海水。剩 '+people+' 人</div>';
+    stage.innerHTML='<div class="mini-sea" style="position:relative;height:'+H+'px;border-radius:12px;overflow:hidden;touch-action:none;background:linear-gradient(#6ec1e4 0 34%,#f3e3b8 34% 66%,#6ec1e4 66% 100%)"></div><div class="mini-progress">在乾路上按住（不用剛好點到人），把人一個個推到右側盡頭，別碰到上下海水。剩 '+people+' 人</div>';
     const sea=stage.querySelector(".mini-sea"),prog=stage.querySelector(".mini-progress");
     function spawn(){ if(people<=0){ done({score:Math.max(50,2000-touches*150),penalty:touches}); return; }
       cur=document.createElement("div"); cur.className="mini-person"; cur.innerHTML=ic("person"); cur.style.left="6px"; cur.style.top=(H/2-15)+"px"; sea.appendChild(cur); }
     function moveTo(e){ if(!cur)return; const r=sea.getBoundingClientRect();
       let x=Math.max(0,Math.min(r.width-30,e.clientX-r.left-15)),y=Math.max(0,Math.min(H-30,e.clientY-r.top-15));
       cur.style.left=x+"px"; cur.style.top=y+"px";
-      if(y<H*0.18-4||y>H*0.82-26){ if(!cur._t){cur._t=true;touches++;prog.textContent="別碰到海水（已碰 "+touches+" 次）";setTimeout(()=>{if(cur)cur._t=false;},250);} }
+      if(y<H*0.34-4||y>H*0.66-26){ if(!cur._t){cur._t=true;touches++;prog.textContent="別碰到海水（已碰 "+touches+" 次）";setTimeout(()=>{if(cur)cur._t=false;},250);} }
       if(x>=r.width-34){ cur.remove(); people--; prog.textContent="剩 "+people+" 人"; cur=null; drag=false; spawn(); } }
     // press anywhere in the channel to grab the current person — no precise aim needed
     sea.addEventListener("pointerdown",e=>{ drag=true; try{sea.setPointerCapture(e.pointerId);}catch(_){} moveTo(e); });
