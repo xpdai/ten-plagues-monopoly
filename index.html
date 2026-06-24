@@ -588,9 +588,9 @@
 <!-- ============ Audio settings popover ============ -->
 <div id="audio-pop" class="hidden">
   <div class="ap-title">音訊設定</div>
-  <div class="ap-row"><span>音樂</span><button id="ap-music" class="ap-toggle"></button></div>
+  <div class="ap-row"><span>音樂</span><button id="ap-music" class="ap-toggle" aria-label="音樂開關"></button></div>
   <input id="ap-vol" type="range" min="0" max="140" step="5" aria-label="音樂音量">
-  <div class="ap-row"><span>音效</span><button id="ap-sfx" class="ap-toggle"></button></div>
+  <div class="ap-row"><span>音效</span><button id="ap-sfx" class="ap-toggle" aria-label="音效開關"></button></div>
 </div>
 
 <script>
@@ -1642,8 +1642,8 @@ const _ap=document.getElementById("audio-pop"), _apMusic=document.getElementById
 // Header button icon = 🔊 unless BOTH music and SFX are off.
 function refreshMute(){ if(_muteBtn) _muteBtn.innerHTML=ic((BGM.muted&&SFX.muted)?"mute":"sound"); }
 function refreshAudioPop(){
-  if(_apMusic){ _apMusic.textContent=BGM.muted?"關":"開"; _apMusic.className="ap-toggle "+(BGM.muted?"off":"on"); }
-  if(_apSfx){ _apSfx.textContent=SFX.muted?"關":"開"; _apSfx.className="ap-toggle "+(SFX.muted?"off":"on"); }
+  if(_apMusic){ _apMusic.textContent=BGM.muted?"關":"開"; _apMusic.className="ap-toggle "+(BGM.muted?"off":"on"); _apMusic.setAttribute("aria-pressed",String(!BGM.muted)); }
+  if(_apSfx){ _apSfx.textContent=SFX.muted?"關":"開"; _apSfx.className="ap-toggle "+(SFX.muted?"off":"on"); _apSfx.setAttribute("aria-pressed",String(!SFX.muted)); }
   if(_apVol){ _apVol.value=Math.round(BGM.vol*100); _apVol.disabled=BGM.muted; }
 }
 function toggleAudioPop(show){
