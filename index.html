@@ -332,6 +332,34 @@
   #resume-bar .resume-txt span{color:var(--ink-soft);font-size:12px;}
   #resume-bar .resume-btns{display:flex;gap:8px;}
   #resume-bar button{padding:9px 14px;font-size:14px;}
+  .ghost-btn{background:#fff;border:2px solid var(--line,#ece1c8);color:var(--ink);}
+  #audio-pop{position:fixed;z-index:140;background:#fff;border:2.5px solid var(--line,#ece1c8);border-radius:14px;box-shadow:var(--pop);padding:11px 13px;display:flex;flex-direction:column;gap:9px;min-width:180px;}
+  #audio-pop .ap-title{font-size:12px;font-weight:800;color:var(--ink-soft);text-align:center;}
+  #audio-pop .ap-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;font-weight:800;color:var(--ink);}
+  #audio-pop .ap-toggle{min-width:54px;padding:6px 12px;font-size:13px;border-radius:20px;}
+  #audio-pop .ap-toggle.on{background:linear-gradient(180deg,#74c47f,var(--leaf-deep,#3d8a48));color:#fff;}
+  #audio-pop .ap-toggle.off{background:#e2e2e2;color:#777;}
+  #audio-pop #ap-vol{width:100%;accent-color:var(--teal,#46aaa6);}
+  #manual-btn{width:100%;margin-top:8px;font-size:14px;padding:11px;}
+  /* 關主手冊 */
+  #manual-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;overflow:auto;padding:18px;display:flex;justify-content:center;}
+  .manual-sheet{background:#fff;max-width:740px;width:100%;border-radius:16px;align-self:flex-start;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .manual-bar{position:sticky;top:0;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:13px 18px;border-bottom:2px solid var(--line,#ece1c8);border-radius:16px 16px 0 0;}
+  .manual-bar button{padding:8px 14px;font-size:14px;}
+  #manual-body{padding:18px 22px 26px;color:#2a2733;}
+  #manual-body h2{font-size:22px;color:var(--nile-deep,#13415c);margin:0 0 4px;}
+  #manual-body .m-sub{color:#7a6347;font-size:13px;margin-bottom:14px;}
+  #manual-body .m-rules{font-size:13px;line-height:1.65;background:#fbf2da;border-radius:10px;padding:11px 13px;margin-bottom:16px;white-space:pre-line;}
+  #manual-body .m-st{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid #eee;break-inside:avoid;page-break-inside:avoid;}
+  #manual-body .m-n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--nile-deep,#13415c);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  #manual-body .m-name{font-weight:800;font-size:15px;}
+  #manual-body .m-task{font-size:13px;color:#3a3a4a;line-height:1.55;margin-top:2px;}
+  @media print{
+    body>*{display:none !important;}
+    #manual-overlay{display:block !important;position:static;background:#fff;padding:0;overflow:visible;}
+    #manual-overlay .no-print{display:none !important;}
+    .manual-sheet{box-shadow:none;max-width:none;border-radius:0;}
+  }
   .ic-rot90{transform:rotate(90deg);} .ic-rot180{transform:rotate(180deg);} .ic-rot270{transform:rotate(270deg);}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
@@ -475,6 +503,7 @@
   </div>
 
   <button id="start-btn">開始遊戲</button>
+  <button id="manual-btn" class="ghost-btn">關主手冊（可列印 / 存 PDF）</button>
   <p class="credit">圖示 by <a href="https://icons8.com" target="_blank" rel="noopener">Icons8</a></p>
 </section>
 
@@ -526,6 +555,25 @@
   <div class="standings" id="standings"></div>
   <button id="play-again-btn">再玩一局</button>
 </div></div>
+
+<!-- ============ 關主手冊 (printable) ============ -->
+<div id="manual-overlay" class="hidden">
+  <div class="manual-sheet">
+    <div class="manual-bar no-print">
+      <strong>關主手冊</strong>
+      <span><button id="manual-print" class="good">列印 / 存 PDF</button> <button id="manual-close" class="ghost-btn">關閉</button></span>
+    </div>
+    <div id="manual-body"></div>
+  </div>
+</div>
+
+<!-- ============ Audio settings popover ============ -->
+<div id="audio-pop" class="hidden">
+  <div class="ap-title">音訊設定</div>
+  <div class="ap-row"><span>音樂</span><button id="ap-music" class="ap-toggle"></button></div>
+  <input id="ap-vol" type="range" min="0" max="140" step="5" aria-label="音樂音量">
+  <div class="ap-row"><span>音效</span><button id="ap-sfx" class="ap-toggle"></button></div>
+</div>
 
 <script>
 // ============================================================
@@ -935,6 +983,8 @@ const SFX={
 // Light, cheerful looping BGM — synthesised (no audio files), shares the mute toggle.
 const BGM={
   on:false, timer:null, next:0, step:0, master:null,
+  muted:(()=>{try{return localStorage.getItem("exodusMusicMuted")==="1";}catch(e){return false;}})(),
+  vol:(()=>{try{const v=parseFloat(localStorage.getItem("exodusMusicVol"));return isNaN(v)?0.9:Math.max(0,Math.min(1.4,v));}catch(e){return 0.9;}})(),
   // 4-bar I–V–vi–IV (C–G–Am–F); melody = 1 note per 2 steps, 32 steps total
   M:[329.63,392.00,523.25,392.00, 293.66,392.00,493.88,392.00, 261.63,329.63,440.00,329.63, 261.63,349.23,440.00,349.23],
   ROOT:[130.81,98.00,110.00,87.31],
@@ -947,7 +997,7 @@ const BGM={
     this.next=SFX.ctx.currentTime+0.12; this.step=0; this.setVol(); this._tick();
   },
   stop(){ this.on=false; if(this.timer){clearTimeout(this.timer);this.timer=null;} if(this.master){try{this.master.disconnect();}catch(e){} this.master=null;} },
-  setVol(){ if(this.master&&SFX.ctx) this.master.gain.setTargetAtTime(SFX.muted?0:0.9, SFX.ctx.currentTime, 0.08); },
+  setVol(){ if(this.master&&SFX.ctx) this.master.gain.setTargetAtTime(this.muted?0:this.vol, SFX.ctx.currentTime, 0.08); },
   _n(f,t,d,type,v){ const o=SFX.ctx.createOscillator(),g=SFX.ctx.createGain(); o.type=type; o.frequency.value=f; o.connect(g); g.connect(this.master);
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.start(t); o.stop(t+d+0.03); },
   _tick(){
@@ -1539,8 +1589,26 @@ document.getElementById("play-again-btn").addEventListener("click",backToSetup);
 // ============================================================
 SFX.init();
 const _muteBtn=document.getElementById("mute-btn");
-function refreshMute(){ if(_muteBtn) _muteBtn.innerHTML=ic(SFX.muted?"mute":"sound"); }
-if(_muteBtn) _muteBtn.addEventListener("click",()=>{ SFX.init(); const m=SFX.toggleMute(); refreshMute(); if(!m){SFX.resume();SFX.tick();BGM.start();} BGM.setVol(); });
+const _ap=document.getElementById("audio-pop"), _apMusic=document.getElementById("ap-music"), _apSfx=document.getElementById("ap-sfx"), _apVol=document.getElementById("ap-vol");
+// Header button icon = 🔊 unless BOTH music and SFX are off.
+function refreshMute(){ if(_muteBtn) _muteBtn.innerHTML=ic((BGM.muted&&SFX.muted)?"mute":"sound"); }
+function refreshAudioPop(){
+  if(_apMusic){ _apMusic.textContent=BGM.muted?"關":"開"; _apMusic.className="ap-toggle "+(BGM.muted?"off":"on"); }
+  if(_apSfx){ _apSfx.textContent=SFX.muted?"關":"開"; _apSfx.className="ap-toggle "+(SFX.muted?"off":"on"); }
+  if(_apVol){ _apVol.value=Math.round(BGM.vol*100); _apVol.disabled=BGM.muted; }
+}
+function toggleAudioPop(show){
+  if(!_ap)return;
+  const open=(show===undefined)?_ap.classList.contains("hidden"):show;
+  if(open){ const r=_muteBtn.getBoundingClientRect(); _ap.style.top=(r.bottom+8)+"px"; _ap.style.right=Math.max(8,window.innerWidth-r.right)+"px"; _ap.style.left="auto"; refreshAudioPop(); _ap.classList.remove("hidden"); }
+  else _ap.classList.add("hidden");
+}
+if(_muteBtn) _muteBtn.addEventListener("click",e=>{ SFX.init(); e.stopPropagation(); toggleAudioPop(); });
+if(_apMusic) _apMusic.addEventListener("click",()=>{ SFX.init(); BGM.muted=!BGM.muted; try{localStorage.setItem("exodusMusicMuted",BGM.muted?"1":"0");}catch(e){} if(!BGM.muted){SFX.resume();BGM.start();} BGM.setVol(); refreshAudioPop(); refreshMute(); });
+if(_apSfx) _apSfx.addEventListener("click",()=>{ SFX.init(); SFX.toggleMute(); if(!SFX.muted){SFX.resume();SFX.tick();} refreshAudioPop(); refreshMute(); });
+if(_apVol) _apVol.addEventListener("input",()=>{ BGM.vol=Math.max(0,Math.min(1.4,(+_apVol.value)/100)); try{localStorage.setItem("exodusMusicVol",String(BGM.vol));}catch(e){} if(!BGM.muted){SFX.init();SFX.resume();BGM.start();} BGM.setVol(); });
+document.addEventListener("click",e=>{ if(_ap&&!_ap.classList.contains("hidden")&&!_ap.contains(e.target)&&_muteBtn&&!_muteBtn.contains(e.target)) _ap.classList.add("hidden"); });
+window.addEventListener("resize",()=>{ if(_ap&&!_ap.classList.contains("hidden")) toggleAudioPop(true); });
 refreshMute();
 renderSetup();
 
@@ -1559,10 +1627,30 @@ document.getElementById("resume-yes").addEventListener("click",()=>{ const o=loa
 document.getElementById("resume-no").addEventListener("click",()=>{ clearSave(); showResumeBar(); });
 showResumeBar();
 
+// 關主手冊：把每一站的大地任務整理成一頁可列印的指南
+function buildManual(){
+  const body=document.getElementById("manual-body");
+  let h=`<h2>關主手冊 — 出埃及大冒險</h2><div class="m-sub">大地遊戲模式 · 給帶關卡的關主使用</div>`;
+  h+=`<div class="m-rules">🎯 目標：玩家輪流擲骰前進，最先「剛好」抵達第 26 站者獲勝；點數超過終點會像飛行棋一樣反彈退回。\n🎲 流程：每位玩家輪流擲骰 → 前進 → 完成所在站的任務 → 換下一位。\n🧑‍🏫 關主：主持每一站、出題、判定過關，必要時與玩家猜拳。\n🧘 「維持動作」要保持到下一輪任務開始前；🏇 追兵會讓被抓到的玩家後退 1 格。</div>`;
+  BOARD.forEach(tile=>{
+    const ph=tile.plan("land","host"), pv=tile.plan("land","vs");
+    const task=(ph.text===pv.text)?ph.text:`〔關主模式〕${ph.text}\n〔玩家對戰〕${pv.text}`;
+    h+=`<div class="m-st"><div class="m-n">${tile.n}</div><div><div class="m-name">${escapeHtml(tile.name)}${tile.sub?` <span style="font-weight:600;color:#7a6347;font-size:12px">· ${escapeHtml(tile.sub)}</span>`:""}</div><div class="m-task">${escapeHtml(task).replace(/\n/g,"<br>")}</div></div></div>`;
+  });
+  body.innerHTML=h;
+}
+const _manualOv=document.getElementById("manual-overlay");
+document.getElementById("manual-btn").addEventListener("click",()=>{ buildManual(); _manualOv.classList.remove("hidden"); _manualOv.scrollTop=0; });
+document.getElementById("manual-close").addEventListener("click",()=>_manualOv.classList.add("hidden"));
+document.getElementById("manual-print").addEventListener("click",()=>window.print());
+_manualOv.addEventListener("click",e=>{ if(e.target===_manualOv) _manualOv.classList.add("hidden"); });
+
 // PWA: register the service worker (installable + offline). Harmless on file://.
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
 }
+
+window.__appReady=true; // all listeners attached (tests wait on this)
 </script>
 </body>
 </html>
