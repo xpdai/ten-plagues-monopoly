@@ -417,6 +417,10 @@
   /* ---------- Inline SVG icon system (line style) ---------- */
   .ic{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex:none;object-fit:contain;}
   img.ic{user-select:none;-webkit-user-drag:none;}
+  /* AI character avatars — inline by default, fill their circular container in tokens/cards/swatches */
+  .av-img{width:1.45em;height:1.45em;border-radius:50%;object-fit:cover;vertical-align:-0.34em;flex:none;user-select:none;-webkit-user-drag:none;background:#fff;}
+  .token,.player-card .av,.swatch,.referee-chip .ref-av{overflow:hidden;}
+  .token .av-img,.player-card .av .av-img,.swatch .av-img{width:100%;height:100%;border-radius:50%;vertical-align:0;}
   .credit{text-align:center;font-size:11px;color:var(--ink-soft);margin:14px 0 0;}
   .credit a{color:var(--teal-deep);}
   #resume-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;
@@ -697,10 +701,10 @@
 // Data
 // ============================================================
 const AVATARS=[
-  {id:"camel",hex:"#e76f51",emoji:"🐫",name:"駱駝"},
-  {id:"sheep",hex:"#2a9d8f",emoji:"🐑",name:"綿羊"},
-  {id:"eagle",hex:"#e9c46a",emoji:"🦅",name:"老鷹"},
-  {id:"cactus",hex:"#c3a0f0",emoji:"🌵",name:"仙人掌"},
+  {id:"camel",hex:"#e76f51",emoji:"🐫",name:"駱駝",img:"assets/av/camel.jpg"},
+  {id:"sheep",hex:"#2a9d8f",emoji:"🐑",name:"綿羊",img:"assets/av/sheep.jpg"},
+  {id:"eagle",hex:"#e9c46a",emoji:"🦅",name:"老鷹",img:"assets/av/eagle.jpg"},
+  {id:"cactus",hex:"#c3a0f0",emoji:"🌵",name:"仙人掌",img:"assets/av/cactus.jpg"},
 ];
 // The 電腦關主 (computer host) — only present in 遊戲軟體模式 + 關主模式.
 // 關主模式（限遊戲軟體模式）：關主 🧑‍🏫 是不繞圈的裁判（出題、主持、猜拳），
@@ -842,7 +846,7 @@ function persist(){
     v:1, mode:state.mode, submode:state.submode, humans:state.humans, bots:state.bots, diff:state.diff, turnIdx:state.turnIdx,
     log:state.log.slice(0,40),
     players:state.players.map(p=>({id:p.id,name:p.name,pos:p.pos,skipTurns:p.skipTurns,shoesOff:!!p.shoesOff,
-      isBot:!!p.isBot,maintaining:p.maintaining||null,av:{emoji:p.av.emoji,hex:p.av.hex,name:p.av.name,id:p.av.id}}))
+      isBot:!!p.isBot,maintaining:p.maintaining||null,av:{emoji:p.av.emoji,hex:p.av.hex,name:p.av.name,id:p.av.id,img:p.av.img||null}}))
   })); }catch(e){}
 }
 function clearSave(){ try{localStorage.removeItem(SAVE_KEY);}catch(e){} }
@@ -899,7 +903,7 @@ function renderSetup(){
     rows.appendChild(row);
     const sw=row.querySelector(".swatches");
     AVATARS.forEach((a,ai)=>{
-      const el=document.createElement("div"); el.className="swatch"; el.style.background="#fff"; el.style.boxShadow="inset 0 0 0 3px "+a.hex; el.innerHTML=ic(EMOJI2NAME[a.emoji]||"dot");
+      const el=document.createElement("div"); el.className="swatch"; el.style.background="#fff"; el.style.boxShadow="inset 0 0 0 3px "+a.hex; el.innerHTML=avIcon(a);
       el.dataset.av=ai; el.dataset.row=i; el.setAttribute("role","button"); el.setAttribute("tabindex","0");
       el.title=a.name; sw.appendChild(el);
     });
@@ -983,7 +987,11 @@ function emo(s){
   return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
     .replace(EMOJI_RE,e=>{const v=EMOJI2NAME[e];if(!v)return e;const sp=v.indexOf(" ");return sp<0?ic(v):ic(v.slice(0,sp),v.slice(sp+1));});
 }
-function avIcon(p,cls){return ic(EMOJI2NAME[p.emoji]||EMOJI2NAME[p.av&&p.av.emoji]||"dot",cls);}
+function avIcon(p,cls){
+  const img=(p&&p.img)||(p&&p.av&&p.av.img);
+  if(img) return `<img class="av-img${cls?" "+cls:""}" src="${img}" alt="" draggable="false">`;
+  return ic(EMOJI2NAME[p.emoji]||EMOJI2NAME[p.av&&p.av.emoji]||"dot",cls);
+}
 
 // ============================================================
 // Start
