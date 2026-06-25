@@ -1,7 +1,7 @@
 // Service worker for 出埃及大冒險 — installable PWA + offline play.
 // App shell is cached on install; Icons8 images are cached on first fetch so
 // they keep working offline afterwards. Bump CACHE to invalidate old caches.
-const CACHE = "exodus-v4";
+const CACHE = "exodus-v5";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg", "./assets/title.jpg", "./assets/win.jpg",
   "./assets/av/camel.jpg", "./assets/av/sheep.jpg", "./assets/av/eagle.jpg", "./assets/av/cactus.jpg"];
 
