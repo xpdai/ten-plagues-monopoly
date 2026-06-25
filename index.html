@@ -329,6 +329,8 @@
     position:relative;z-index:210;animation:popin .5s cubic-bezier(.34,1.56,.64,1);}
   #win-screen h1{font-size:38px;color:var(--teal-deep);margin-bottom:12px;}
   #win-screen .win-trophy{font-size:58px;color:var(--gold,#e9b949);margin:6px 0 2px;display:flex;justify-content:center;animation:trophybob 1.8s ease-in-out infinite;}
+  #win-screen .win-hero{display:block;width:100%;height:auto;aspect-ratio:820/638;object-fit:cover;
+    border-radius:18px 16px 18px 16px;border:3px solid var(--ink);box-shadow:var(--pop-sm);margin:10px 0 14px;animation:popin .5s cubic-bezier(.34,1.56,.64,1);}
   @keyframes trophybob{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-10px) rotate(5deg)}}
   #win-screen .winner-name{font-size:30px;font-weight:800;font-family:"Baloo 2","LXGW WenKai TC",sans-serif;color:var(--coral-deep);margin:10px 0 22px;}
   #win-screen .standings{text-align:left;}
@@ -665,7 +667,7 @@
 <!-- ============ WIN ============ -->
 <div id="win-screen" class="hidden"><div class="inner">
   <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"/></svg> 抵達應許之地！</h1>
-  <div class="win-trophy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trophy"/></svg></div>
+  <img class="win-hero" src="assets/win.jpg" width="820" height="638" alt="眾人在紅海對岸歡慶歌唱的插畫" loading="lazy">
   <div class="winner-name" id="winner-name">—</div>
   <div class="standings" id="standings"></div>
   <button id="play-again-btn">再玩一局</button>

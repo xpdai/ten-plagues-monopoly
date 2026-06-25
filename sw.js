@@ -2,7 +2,7 @@
 // App shell is cached on install; Icons8 images are cached on first fetch so
 // they keep working offline afterwards. Bump CACHE to invalidate old caches.
 const CACHE = "exodus-v3";
-const SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg", "./assets/title.jpg"];
+const SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg", "./assets/title.jpg", "./assets/win.jpg"];
 
 self.addEventListener("install", e => {
   self.skipWaiting();
