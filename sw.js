@@ -1,7 +1,7 @@
 // Service worker for 出埃及大冒險 — installable PWA + offline play.
 // App shell is cached on install; Icons8 images are cached on first fetch so
 // they keep working offline afterwards. Bump CACHE to invalidate old caches.
-const CACHE = "exodus-v5";
+const CACHE = "exodus-v6";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg", "./assets/title.jpg", "./assets/win.jpg",
   "./assets/av/camel.jpg", "./assets/av/sheep.jpg", "./assets/av/eagle.jpg", "./assets/av/cactus.jpg"];
 
@@ -34,7 +34,18 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  // Same-origin app shell + assets: stale-while-revalidate.
+  // Page navigations + the HTML document: network-first, so a fresh deploy
+  // shows up on the very next load (falls back to cache when offline).
+  const isDoc = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
+  if (url.origin === location.origin && isDoc) {
+    e.respondWith(caches.open(CACHE).then(async c => {
+      try { const res = await fetch(req); if (res && res.ok) c.put(req, res.clone()); return res; }
+      catch (err) { return (await c.match(req)) || (await c.match("./index.html")) || Response.error(); }
+    }));
+    return;
+  }
+
+  // Other same-origin assets (CSS-in-HTML is inline; images, manifest, icons): stale-while-revalidate.
   if (url.origin === location.origin) {
     e.respondWith(caches.open(CACHE).then(async c => {
       const hit = await c.match(req);
