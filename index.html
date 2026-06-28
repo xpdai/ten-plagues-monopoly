@@ -1391,14 +1391,16 @@ function taskModal(p,tile,plan,opts){
         if(plan.kind==="solo"){
           await button("開始挑戰 🎮"); controls.innerHTML="";
           const r=await runMini(plan.game);
-          if(r.penalty>0){ pushLog(`〔${tile.name}〕${p.name} 完成了，失誤 ${r.penalty} 次。`); setText(`完成！失誤 ${r.penalty} 次，沒關係，繼續前進！`); }
+          if(miniGood(plan.game,r)){ pushLog(`✅ ${p.name} 完成了「${tile.name}」。`); const moved=bonusStep(p); setText(moved?`表現優秀！額外前進 1 格 ⭐`:`表現優秀 ⭐`); }
+          else if(r.penalty>0){ pushLog(`〔${tile.name}〕${p.name} 完成了，失誤 ${r.penalty} 次。`); setText(`完成！失誤 ${r.penalty} 次，沒關係，繼續前進！`); }
           else { pushLog(`✅ ${p.name} 完成了「${tile.name}」。`); setText(`完成！表現得很好。`); }
           await button("完成 ✓"); return done();
         }
         if(state.submode==="host"){
           await button("開始挑戰 🎮"); controls.innerHTML="";
-          await runMini(plan.game);
-          setText(`完成！順利通過關主的考驗。`);
+          const r=await runMini(plan.game);
+          if(miniGood(plan.game,r)){ const moved=bonusStep(p); setText(moved?`完成！表現優秀，額外前進 1 格 ⭐`:`完成！表現優秀 ⭐`); }
+          else setText(`完成！順利通過關主的考驗。`);
           await button("完成闖關 ✓");
           pushLog(`✅ ${p.name} 完成了「${tile.name}」的挑戰。`);
           return done();
@@ -1420,6 +1422,7 @@ function taskModal(p,tile,plan,opts){
         setText(`${p.av.emoji}${p.name} ${Math.round(ps)} 比 ${opp.av.emoji}${opp.name} ${Math.round(os)} → ${winner.av.emoji}${winner.name} 獲勝！`);
         (pWin?SFX.success():SFX.lose());
         pushLog(`🏆 ${winner.name} 在「${tile.name}」勝出（${Math.round(ps)} : ${Math.round(os)}）。`);
+        bonusStep(winner);  // 對戰贏家額外前進 1 格
         if(pWin && plan.swap){
           if(await choice([{label:`與 ${opp.name} 互換格子`,val:1},{label:"留在原地",val:0,cls:"ghost"}])) doSwap(p,opp);
           else await Promise.resolve();
@@ -1571,6 +1574,14 @@ function spawnTargets(stage,done,iconName,K,move,color){
     f.style.top=Math.max(0,Math.min(H(),parseFloat(f.style.top)+(Math.random()*44-22)))+"px"; }); },380);
   return ()=>{ if(iv)clearInterval(iv); };
 }
+// 「達標」門檻：迷你遊戲分數達到此值 → 表現優秀，額外前進 1 格。
+// 分數越高越好；計時類較高、失誤類較低。photo 為純上傳故不給獎勵。
+const MINI_PAR={ tap30:5000, frogs:11000, flies:9000, dance:9000, typing:18000,
+  dodge:1680, rash:8000, trace:1700, redsea:1700, palm:1800, paint:1000, arrange:1000, photo:Infinity };
+function miniGood(key,r){ const par=MINI_PAR[key]; return (par!=null && isFinite(par)) ? !!(r && r.score>=par) : false; }
+// 額外前進 1 格的獎勵；不會把人推上終點（仍需擲骰剛好抵達），避免跳過勝利流程。
+function bonusStep(p){ if(p && p.pos<GOAL_IDX-1){ applyMove(p,1); SFX.success(); pushLog(`⭐ ${p.av.emoji||""}${p.name} 表現優秀，額外前進 1 格！`); return true; } return false; }
+
 const MINIGAMES={
   tap30:{mount(stage,done){
     let n=0,start=Date.now(); const need=dN(30);
@@ -1824,6 +1835,7 @@ document.getElementById("help-btn").addEventListener("click",()=>{
     "🎯 目標：輪流擲骰前進，最先「剛好」抵達終點（第 26 站）者獲勝；點數超過終點會像飛行棋一樣反彈退回。\n\n"+
     "🎮 模式：\n• 遊戲軟體模式：在螢幕上玩迷你遊戲。\n• 大地遊戲模式：在實體場地做動作闖關。\n兩種模式都可搭配「關主模式」或「玩家對戰模式」。\n\n"+
     "🧑‍🏫 關主模式：關主是主持人（裁判），負責出題、陪你猜拳、判定過關，不繞圈競賽。可以只有 1 位玩家自己和關主玩。\n👥 參賽人數：用 ＋／− 分別設定「玩家」與「電腦」人數。🤖 電腦玩家會自動擲骰、自己繞圈與大家競賽，數量可加可不加（也可 0 個）。\n\n"+
+    "⭐ 迷你遊戲獎勵：在螢幕迷你遊戲表現優秀（達到門檻）可額外前進 1 格——技巧好就跑得快！對戰時贏家也會多前進 1 格。（獎勵不會直接把你推上終點，仍要擲骰剛好抵達。）\n\n"+
     "⚔️ 對戰格：指定一位玩家比賽，贏的一方可選擇是否與對手互換格子（換到對方位置、但不執行該格任務）。\n\n"+
     "🎴 機會與命運（法老放行）：抽卡決定前進步數，或暫停一輪。\n🏇 追兵：隨機抽一位玩家後退 1 格。\n🧘 大地維持動作：做出動作維持到下一輪，輪到你時自動解除。\n\n"+
     "💡 點任一格可查看該格任務；點玩家卡可查看狀態。\n\n🎨 圖示來源：Icons8（icons8.com）。");
@@ -1878,7 +1890,7 @@ showResumeBar();
 function buildManual(){
   const body=document.getElementById("manual-body");
   let h=`<h2>關主手冊 — 出埃及大冒險</h2><div class="m-sub">大地遊戲模式 · 給帶關卡的關主使用</div>`;
-  h+=`<div class="m-rules">🎯 目標：玩家輪流擲骰前進，最先「剛好」抵達第 26 站者獲勝；點數超過終點會像飛行棋一樣反彈退回。\n🎲 流程：每位玩家輪流擲骰 → 前進 → 完成所在站的任務 → 換下一位。\n🧑‍🏫 關主：主持每一站、出題、判定過關，必要時與玩家猜拳。\n🧘 「維持動作」要保持到下一輪任務開始前；🏇 追兵會讓被抓到的玩家後退 1 格。</div>`;
+  h+=`<div class="m-rules">🎯 目標：玩家輪流擲骰前進，最先「剛好」抵達第 26 站者獲勝；點數超過終點會像飛行棋一樣反彈退回。\n🎲 流程：每位玩家輪流擲骰 → 前進 → 完成所在站的任務 → 換下一位。\n🧑‍🏫 關主：主持每一站、出題、判定過關，必要時與玩家猜拳。\n🧘 「維持動作」要保持到下一輪任務開始前；🏇 追兵會讓被抓到的玩家後退 1 格。\n⭐ 迷你遊戲表現優秀可額外前進 1 格；對戰贏家也多前進 1 格（不會直接推上終點）。</div>`;
   BOARD.forEach(tile=>{
     const ph=tile.plan("land","host"), pv=tile.plan("land","vs");
     const task=(ph.text===pv.text)?ph.text:`〔關主模式〕${ph.text}\n〔玩家對戰〕${pv.text}`;
