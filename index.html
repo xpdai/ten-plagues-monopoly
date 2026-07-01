@@ -379,15 +379,17 @@
     /* Candy-Crush style: the map IS the full-screen background; HUD floats on top */
     #game.active{display:block;height:auto;padding:0;}
     #board-wrap{position:fixed;inset:0;height:100dvh;max-height:none;box-sizing:border-box;
-      padding:96px 0 150px;overflow-y:auto;overflow-x:hidden;z-index:0;-webkit-overflow-scrolling:touch;}
+      padding:112px 0 150px;overflow-y:auto;overflow-x:hidden;z-index:0;-webkit-overflow-scrolling:touch;}
     #board .stars{opacity:.95;}
     .tile .idx{width:23px;height:23px;font-size:12px;}
 
     /* top HUD floats over the map with a soft scrim for legibility */
-    .header-bar{position:fixed;top:0;left:0;right:0;z-index:20;padding:8px 10px;
-      background:linear-gradient(180deg,rgba(196,231,247,.96),rgba(196,231,247,0));}
-    .header-bar h2{font-size:17px;}
-    #announce-wrap{position:fixed;top:47px;left:6px;right:6px;z-index:20;}
+    .header-bar{position:fixed;top:0;left:0;right:0;z-index:20;padding:6px 8px;flex-wrap:nowrap;gap:6px;min-height:44px;
+      background:linear-gradient(180deg,rgba(196,231,247,.97),rgba(196,231,247,.55) 70%,rgba(196,231,247,0));}
+    .header-bar h2{font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+    .header-bar .mode-tag{display:none;}          /* secondary — hidden on phones to keep header one line */
+    .header-bar .new-game{padding:7px 9px;font-size:12.5px;flex:none;}
+    #announce-wrap{position:fixed;top:62px;left:6px;right:6px;z-index:20;}
     #announce{background:rgba(255,255,255,.7);border-radius:14px;}
     #announce-log{max-height:56vh;}
 
