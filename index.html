@@ -123,19 +123,14 @@
   #game{display:none;max-width:1280px;margin:0 auto;padding:14px;}
   #game.active{display:grid;grid-template-columns:1fr 350px;gap:16px;}
   .header-bar{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:9px;flex-wrap:wrap;
-    background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
-    padding:11px 18px;border:3px solid var(--ink);border-radius:22px 20px 24px 18px;box-shadow:var(--pop);}
+    padding:2px 4px;}
   .header-bar h2{color:var(--teal-deep);font-size:22px;white-space:nowrap;}
   .header-bar .mode-tag{font-size:12.5px;font-weight:700;color:#fff;background:var(--plum);border:2px solid var(--ink);padding:5px 12px;border-radius:20px;box-shadow:var(--pop-sm);}
   .header-bar .new-game{background:var(--cream);padding:9px 14px;font-size:14px;}
 
   /* ---------- Board ---------- */
-  #board-wrap{background:var(--paper);background-image:
-      radial-gradient(circle at 18% 78%,rgba(136,189,106,.18) 0 7%,transparent 7%),
-      radial-gradient(circle at 86% 22%,rgba(70,170,166,.16) 0 9%,transparent 9%),
-      var(--grain);
-    background-size:auto,auto,var(--grain-size);
-    padding:12px;border:3px solid var(--ink);border-radius:26px 22px 26px 22px;box-shadow:var(--pop);overflow:auto;-webkit-overflow-scrolling:touch;}
+  /* frameless: the candy map sits directly on the page background */
+  #board-wrap{background:transparent;padding:4px;overflow:auto;-webkit-overflow-scrolling:touch;}
   #board-fit{position:relative;margin:0 auto;}
   @media (min-width:561px){
     /* hug the board (no empty band) and enlarge the candy nodes */
@@ -191,8 +186,8 @@
   /* ---------- Sidebar ---------- */
   #sidebar{display:flex;flex-direction:column;gap:14px;}
   #mtabs{display:none;}
-  .panel{background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
-    padding:15px;border:3px solid var(--ink);border-radius:22px 18px 22px 18px;box-shadow:var(--pop);}
+  /* frameless: sections float directly, no boxes */
+  .panel{background:transparent;padding:2px 4px;}
   .panel h3{font-size:17px;margin-bottom:11px;color:var(--coral-deep);display:flex;align-items:center;gap:6px;}
   .panel h3::before{content:"✦";color:var(--sand-deep);font-size:14px;}
   .player-card{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:15px;margin-bottom:7px;border:2.5px solid transparent;cursor:pointer;transition:transform .12s,background .12s;}
@@ -227,15 +222,17 @@
   /* ---------- Announcement bar (latest event, ticker style) ---------- */
   #announce-wrap{grid-column:1/-1;position:relative;}
   #announce{width:100%;display:flex;align-items:center;gap:10px;text-align:left;
-    background:linear-gradient(180deg,#fffaf0,#fff2d6);border:3px solid var(--ink);border-radius:18px;
-    padding:10px 14px;box-shadow:var(--pop-sm);cursor:pointer;overflow:hidden;}
+    background:transparent;border:none;border-radius:14px;
+    padding:8px 10px;box-shadow:none;cursor:pointer;overflow:hidden;transition:background .15s;}
+  #announce:hover{background:rgba(255,255,255,.4);}
   #announce .an-mega{width:22px;height:22px;flex:none;color:var(--plum);}
   #announce .an-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     font-weight:700;font-size:14.5px;color:var(--ink);display:flex;align-items:center;gap:5px;}
   #announce .an-caret{flex:none;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
     border-top:6px solid var(--ink-soft);transition:transform .2s;}
   #announce[aria-expanded="true"] .an-caret{transform:rotate(180deg);}
-  #announce.hi{background:linear-gradient(180deg,#fff6d6,#ffe7a6);border-color:#caa12f;}
+  #announce.hi .an-text{color:var(--coral-deep);}
+  #announce.hi .an-mega{color:#caa12f;}
   #announce.pulse .an-text{animation:antext .42s ease;}
   @keyframes antext{0%{opacity:0;transform:translateX(-9px)}100%{opacity:1;transform:none}}
   #announce-log{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;
@@ -395,13 +392,12 @@
     .panel-dice{justify-content:center;align-items:center;}
     .panel-dice h3,.panel-dice .roll-btn{width:100%;}
     .panel-dice .dice{margin:6px 0;}
-    /* bottom nav, Candy-Crush style */
-    #mtabs{display:flex;flex:none;gap:6px;background:var(--paper);background-image:var(--grain);background-size:var(--grain-size);
-      border:3px solid var(--ink);border-radius:20px;padding:6px;box-shadow:var(--pop);}
-    #mtabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border:none;border-radius:14px;
-      background:transparent;color:var(--ink-soft);font-weight:800;font-size:12px;box-shadow:none;}
+    /* frameless bottom nav — standalone pill buttons on the background */
+    #mtabs{display:flex;flex:none;gap:8px;background:transparent;border:none;padding:2px;box-shadow:none;}
+    #mtabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border:none;border-radius:16px;
+      background:rgba(255,255,255,.5);color:var(--ink-soft);font-weight:800;font-size:12px;box-shadow:none;}
     #mtabs button .ic{width:22px;height:22px;}
-    #mtabs button.active{background:var(--leaf);color:#fff;text-shadow:0 1px 0 rgba(74,54,36,.3);}
+    #mtabs button.active{background:var(--leaf);color:#fff;text-shadow:0 1px 0 rgba(74,54,36,.3);box-shadow:var(--pop-sm);}
   }
   @media (max-width:480px){
     #board-wrap{padding:8px;}
