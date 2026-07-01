@@ -376,31 +376,45 @@
     .mini-arrange .mini-slot{width:72px;height:72px;}
   }
   @media (max-width:560px){
-    /* Candy-Crush vertical map + bottom tab bar fills the whole screen */
-    #game.active{display:flex;flex-direction:column;height:100vh;height:100dvh;gap:8px;padding:8px;box-sizing:border-box;}
-    .header-bar,#announce-wrap{flex:none;}
-    #announce-log{max-height:60vh;}
-    #board-wrap{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;}
+    /* Candy-Crush style: the map IS the full-screen background; HUD floats on top */
+    #game.active{display:block;height:auto;padding:0;}
+    #board-wrap{position:fixed;inset:0;height:100dvh;max-height:none;box-sizing:border-box;
+      padding:96px 0 150px;overflow-y:auto;overflow-x:hidden;z-index:0;-webkit-overflow-scrolling:touch;}
     #board .stars{opacity:.95;}
     .tile .idx{width:23px;height:23px;font-size:12px;}
-    /* sidebar = active-tab sheet just above the tab bar; FIXED height so the
-       map above doesn't jump when you switch tabs */
-    #sidebar{flex:none;gap:0;height:32vh;overflow:hidden;}
+
+    /* top HUD floats over the map with a soft scrim for legibility */
+    .header-bar{position:fixed;top:0;left:0;right:0;z-index:20;padding:8px 10px;
+      background:linear-gradient(180deg,rgba(196,231,247,.96),rgba(196,231,247,0));}
+    .header-bar h2{font-size:17px;}
+    #announce-wrap{position:fixed;top:47px;left:6px;right:6px;z-index:20;}
+    #announce{background:rgba(255,255,255,.7);border-radius:14px;}
+    #announce-log{max-height:56vh;}
+
+    /* dice pinned bottom-center, always visible */
+    #sidebar{display:block;height:auto;overflow:visible;}
     #sidebar .panel{display:none;margin:0;}
-    #game.tab-dice .panel-dice,
-    #game.tab-players .panel-players{display:flex;flex-direction:column;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-    .panel-dice{justify-content:center;align-items:center;}
-    .panel-dice h3,.panel-dice .roll-btn{width:100%;}
-    .panel-dice .dice{margin:6px 0;}
-    /* frameless bottom nav — standalone pill buttons on the background */
-    #mtabs{display:flex;flex:none;gap:8px;background:transparent;border:none;padding:2px;box-shadow:none;}
-    #mtabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border:none;border-radius:16px;
-      background:rgba(255,255,255,.5);color:var(--ink-soft);font-weight:800;font-size:12px;box-shadow:none;}
+    #game.active .panel-dice{display:flex;flex-direction:column;align-items:center;gap:2px;
+      position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));
+      z-index:25;width:auto;height:auto;background:transparent;overflow:visible;}
+    .panel-dice #turn-name{font-size:13px;background:rgba(255,255,255,.72);border-radius:20px;padding:2px 12px;margin:0 0 2px;}
+    .panel-dice .dice{margin:2px 0;}
+    .panel-dice .dice-hint{background:rgba(255,255,255,.62);border-radius:12px;padding:1px 9px;}
+
+    /* players: a floating overlay card, toggled by the 玩家 button */
+    #game.tab-players .panel-players{display:block;position:fixed;left:8px;right:8px;bottom:172px;z-index:24;
+      max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+      background:rgba(255,255,255,.96);border-radius:18px;box-shadow:var(--pop);padding:12px 14px;}
+
+    /* single floating 玩家 toggle (dice is always shown, so no 擲骰 tab) */
+    #mtabs{position:fixed;left:12px;bottom:calc(22px + env(safe-area-inset-bottom));z-index:25;display:flex;gap:8px;background:transparent;border:none;padding:0;box-shadow:none;}
+    #mtabs button[data-tab="dice"]{display:none;}
+    #mtabs button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 11px;border:none;border-radius:16px;
+      background:rgba(255,255,255,.88);color:var(--ink-soft);font-weight:800;font-size:11px;box-shadow:var(--pop-sm);}
     #mtabs button .ic{width:22px;height:22px;}
-    #mtabs button.active{background:var(--leaf);color:#fff;text-shadow:0 1px 0 rgba(74,54,36,.3);box-shadow:var(--pop-sm);}
+    #mtabs button.active{background:var(--leaf);color:#fff;text-shadow:0 1px 0 rgba(74,54,36,.3);}
   }
   @media (max-width:480px){
-    #board-wrap{padding:8px;}
     .tile .label{display:none;}
     .roll-btn{padding:18px;font-size:21px;}
     .dice{width:84px;height:84px;}
@@ -1095,7 +1109,9 @@ function setMTab(name){
   g.classList.remove("tab-dice","tab-players","tab-log"); g.classList.add("tab-"+name);
   document.querySelectorAll("#mtabs button").forEach(b=>{ const on=b.dataset.tab===name; b.classList.toggle("active",on); b.setAttribute("aria-pressed",on?"true":"false"); });
 }
-document.getElementById("mtabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b)setMTab(b.dataset.tab); });
+document.getElementById("mtabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return;
+  const g=document.getElementById("game"), want=b.dataset.tab;
+  setMTab(g.classList.contains("tab-"+want)?"dice":want); });  // 玩家鈕：切換浮動面板顯示/隱藏
 function renderTokens(){
   document.querySelectorAll(".tokens").forEach(el=>el.innerHTML="");
   state.players.forEach(p=>{
